@@ -8,10 +8,10 @@ import { Log } from './screens/Log';
 import { Onboard } from './screens/Onboard';
 import { Settings } from './screens/Settings';
 import { useNotifications } from './platform/notifications';
+import { useDerived } from './store/derived';
 import { useRun } from './store/run';
+import { TabBar, type Tab } from './ui/TabBar';
 import './ui/tokens.css';
-
-type View = 'home' | 'log' | 'group' | 'feed' | 'settings' | 'finale';
 
 /** Pull other members' documents periodically and when the app regains focus. */
 const SYNC_INTERVAL_MS = 60_000;
@@ -22,8 +22,10 @@ export function App() {
   const group = useRun((s) => s.group);
   const sync = useRun((s) => s.sync);
   const syncNow = useRun((s) => s.syncNow);
+  const d = useDerived();
 
-  const [view, setView] = useState<View>('home');
+  const [tab, setTab] = useState<Tab>('home');
+  const [logging, setLogging] = useState(false);
 
   useEffect(() => {
     void hydrate();
@@ -47,26 +49,39 @@ export function App() {
   useNotifications();
 
   if (!hydrated) return null;
-  if (!group) return <Onboard onDone={() => setView('home')} />;
+  if (!group) return <Onboard onDone={() => setTab('home')} />;
 
-  const home = () => setView('home');
+  // Day 7 is a showcase and Day 8+ a clean ending — both take over the whole
+  // app rather than living behind a tab. See Finale.tsx's own doc comment.
+  if (d && (d.day === 7 || d.finished)) {
+    return (
+      <AnimatePresence mode="wait">
+        <Finale key="finale" onBack={() => setTab('home')} />
+      </AnimatePresence>
+    );
+  }
+
+  if (logging) {
+    return (
+      <AnimatePresence mode="wait">
+        <Log key="log" onDone={() => setLogging(false)} onCancel={() => setLogging(false)} />
+      </AnimatePresence>
+    );
+  }
 
   return (
-    <AnimatePresence mode="wait">
-      {view === 'home' && (
-        <Home
-          key="home"
-          onLog={() => setView('log')}
-          onGroup={() => setView('group')}
-          onFeed={() => setView('feed')}
-          onSettings={() => setView('settings')}
-        />
-      )}
-      {view === 'log' && <Log key="log" onDone={home} onCancel={home} />}
-      {view === 'group' && <Group key="group" onBack={home} />}
-      {view === 'feed' && <Feed key="feed" onBack={home} />}
-      {view === 'settings' && <Settings key="settings" onBack={home} />}
-      {view === 'finale' && <Finale key="finale" onBack={home} />}
-    </AnimatePresence>
+    <div className="app-shell">
+      <div className="app-shell__content">
+        <AnimatePresence mode="wait">
+          {tab === 'home' && (
+            <Home key="home" onLog={() => setLogging(true)} onSettings={() => setTab('settings')} />
+          )}
+          {tab === 'feed' && <Feed key="feed" />}
+          {tab === 'group' && <Group key="group" />}
+          {tab === 'settings' && <Settings key="settings" />}
+        </AnimatePresence>
+      </div>
+      <TabBar active={tab} onSelect={setTab} />
+    </div>
   );
 }

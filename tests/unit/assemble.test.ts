@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { allPosts, assemble, practisedOn, withResolvedSupport } from '../../src/domain/assemble';
+import { allComments, allPosts, assemble, practisedOn, withResolvedSupport } from '../../src/domain/assemble';
 import { personalReport } from '../../src/domain/report';
 import { scoreDay } from '../../src/domain/scoring';
 import { groupTotal } from '../../src/domain/group';
-import type { Group, MemberDoc, Post, RunDay } from '../../src/domain/types';
+import type { Comment, Group, MemberDoc, Post, RunDay } from '../../src/domain/types';
 import { makeDeclaration, makeLog } from './factories';
 
 const group: Group = { code: 'ABC123', startDate: '2026-08-26' };
@@ -17,6 +17,7 @@ function member(personId: string, over: Partial<MemberDoc> = {}): MemberDoc {
     token: { personId, spentOnDay: null },
     posts: [],
     reactions: [],
+    comments: [],
     updatedAt: '2026-08-26T10:00:00.000Z',
     ...over,
   };
@@ -31,6 +32,10 @@ function post(personId: string, day: RunDay, id = `${personId}-${day}`): Post {
     createdAt: `2026-08-2${day}T10:00:00.000Z`,
     ...(day === 1 ? { image: 'data:image/jpeg;base64,AAAA' } : {}),
   };
+}
+
+function comment(personId: string, postId: string, day: RunDay, text: string, createdAt: string): Comment {
+  return { id: `${personId}-${postId}-${createdAt}`, postId, personId, day, text, createdAt };
 }
 
 describe('assemble', () => {
@@ -107,6 +112,21 @@ describe('feed', () => {
       member('dana', { posts: [post('dana', 2)] }),
     ]);
     expect(posts.map((p) => p.personId)).toEqual(['ofek', 'dana', 'ofek']);
+  });
+});
+
+describe('allComments', () => {
+  it('returns comments from every member, oldest first', () => {
+    const comments = allComments([
+      member('ofek', { comments: [comment('ofek', 'dana-1', 1, 'nice one', '2026-08-26T12:00:00.000Z')] }),
+      member('dana', { comments: [comment('dana', 'dana-1', 1, 'thanks!', '2026-08-26T09:00:00.000Z')] }),
+    ]);
+    expect(comments.map((c) => c.personId)).toEqual(['dana', 'ofek']);
+  });
+
+  it('treats an absent comments field as empty — a doc persisted before comments existed', () => {
+    const { comments: _omit, ...legacyShape } = member('ofek');
+    expect(allComments([legacyShape as MemberDoc])).toEqual([]);
   });
 });
 

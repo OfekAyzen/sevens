@@ -1,9 +1,17 @@
 # Sevens
 
 A seven-day, four-person skill-learning competition, shipped as an installable
-Android APK. Each person learns a *different* skill, so the entire scoring design
-exists to make non-comparable activities comparable without anybody feeling
-ranked into the ground.
+Android APK. Each person learns a *different* skill, so the scoring design's
+core fairness rule — the 24-point daily ceiling, identical for everyone
+regardless of minutes practised — exists to make non-comparable activities
+comparable without rewarding whoever has the most free time.
+
+As of the Design Revision documented at the top of `docs/PRODUCT-SPEC.md`
+(2026-08-27), Sevens deliberately leans into being a real competitive game on
+top of that fair scoring floor: a ranked leaderboard, a real losable streak,
+visible minutes and a public catch-up badge. This was an explicit product
+decision, not drift — see the invariants below for exactly what changed and
+what didn't.
 
 ## Commands
 
@@ -45,27 +53,35 @@ Rules that matter:
 
 These come from `docs/PRODUCT-SPEC.md` and are enforced by
 `tests/unit/invariants.test.ts`. They look like arbitrary restrictions and are
-not; each one is load-bearing.
+not; each one is load-bearing. **Revised 2026-08-27** — items 1, 5 and 6 below
+reverse the original no-streak / alphabetical-only / private-catch-up rules as
+an explicit, approved product decision (see the Design Revision note in
+`docs/PRODUCT-SPEC.md`). Don't "fix" them back without asking first — that
+history is exactly why this file says what it says instead of just linking the
+spec.
 
-1. **Every displayed counter is monotonic.** `daysPractised`, `bestRun`,
-   `groupTotal` and points only ever increase. There is no current-streak value
-   anywhere in the model — see ADR-001 in `src/domain/counters.ts`. A number that
-   can fall will eventually be rendered falling, and one missed Wednesday should
-   not delete four days of visible progress.
-2. **Minutes are recorded, never scored, never shared.** Do not write an
-   aggregate-minutes-by-person query. The moment one exists, some screen will
-   surface it and a cross-skill volume race begins.
+1. **`daysPractised`, `bestRun`, `groupTotal` and `totalPoints` are monotonic**
+   and only ever increase — the honest record of what happened. `currentStreak`
+   (`src/domain/streak.ts`) is the one figure that can fall to 0; it is a
+   real, deliberately losable stake, not an oversight.
+2. **Minutes are recorded and never scored** — the daily ceiling never changes
+   because of them. They ARE now aggregated and shown on the leaderboard
+   (`src/domain/counters.ts`'s `totalMinutes`, `src/domain/leaderboard.ts`).
 3. **The daily ceiling is 24 for everyone.** A 5-minute minimum earns the same 10
    points as a 60-minute one. Rewarding bigger minimums reintroduces exactly the
-   unfairness the design removes.
+   unfairness the design removes. This is the one fairness rule that did NOT
+   change in the revision.
 4. **The group number is the largest element on the home screen**, and any
    ranking is smaller than it wherever both appear.
-5. **The four names are listed alphabetically and never sorted by value.** A
-   sorted list is a leaderboard whatever it is called.
-6. **The catch-up bonus is visible only to its holder.** A "+2" badge on a shared
-   row is a last-place indicator.
-7. **No mechanic may be lost.** No streak breakage, no countdown to the day
-   boundary, no failure state, no nudge button.
+5. **The four people are ranked by current contest score** on the leaderboard
+   (`src/domain/leaderboard.ts`'s `rankMembers`), not listed alphabetically.
+   Ties still break alphabetically, purely for stable rendering.
+6. **The catch-up bonus badge is visible to the whole group**, not just its
+   holder, on the leaderboard row(s) of whoever currently holds it.
+7. **The 2-day and 4-day rules — the 4am boundary, the cover token, the
+   notification cap — are untouched.** Only the streak/rank/minutes/catch-up
+   visibility mechanics above changed; nothing about timing or the honour
+   system did.
 8. **Two notifications per person per day, hard cap.**
 
 If a change appears to require breaking one of these, stop and say so rather than

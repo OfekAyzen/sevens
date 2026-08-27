@@ -13,6 +13,13 @@ import { describe, expect, it } from 'vitest';
  *
  * This is the file to read first if you want to understand what this app refuses
  * to do.
+ *
+ * Design Revision — 2026-08-27 (see docs/PRODUCT-SPEC.md): the streak, the
+ * leaderboard sort, minutes aggregation and streak-flame iconography were all
+ * explicitly approved as a deliberate product pivot toward real competitive
+ * mechanics, so their guards were removed below rather than routed around. The
+ * remaining guards (tone, guilt/urgency, confirmshaming, the exclamation-mark
+ * cap) were NOT part of that decision and still hold.
  */
 
 function sourceFiles(dir = 'src'): string[] {
@@ -27,9 +34,10 @@ function sourceFiles(dir = 'src'): string[] {
 
 /**
  * Comments are stripped before scanning. Otherwise this file's own explanations
- * of what is banned — and the ADRs in the domain modules that say "currentRun
- * does not exist" — would trip their own guards. We police shipped code and
- * shipped strings, not the reasoning about them.
+ * of what is banned — and the design-revision notes in the domain modules that
+ * name banned phrases while explaining why they're no longer banned — would
+ * trip their own guards. We police shipped code and shipped strings, not the
+ * reasoning about them.
  */
 function stripComments(source: string): string {
   return source
@@ -45,11 +53,10 @@ const corpus = files.map((f) => ({
 
 /** Phrases that must never reach a user. Each maps to a rule in the spec. */
 const BANNED_PHRASES: [RegExp, string][] = [
-  [/streak/i, 'no streak framing at all — use "days practised" and "best run"'],
   [/don'?t lose/i, 'loss framing (rule 6)'],
   [/at risk/i, 'risk framing (rule 6)'],
-  [/back to zero|start again/i, 'reset framing — nothing resets (rule 1)'],
-  [/last place|you'?re behind|falling behind/i, 'rank shaming (rule 7)'],
+  [/back to zero|start again/i, 'reset framing — the streak may reach 0, but is never announced as a reset (rule 6)'],
+  [/last place|you'?re behind|falling behind/i, 'rank shaming — the leaderboard shows a number, never this prose (rule 7)'],
   [/hours left|ends in \d|time'?s running out/i, 'countdown pressure (rule 6)'],
   [/we miss you|where have you been|come back/i, 're-engagement guilt (rule 6)'],
   [/are you sure you want to give up/i, 'confirmshaming (rule 10)'],
@@ -68,34 +75,6 @@ describe('banned copy', () => {
       expect(hits, `${why}\nfound in: ${hits.join(', ')}`).toEqual([]);
     });
   }
-});
-
-describe('banned mechanics', () => {
-  it('models no current-run or current-streak value anywhere', () => {
-    // ADR-001. A value that can decrease will eventually be rendered.
-    const hits = corpus.filter((c) => /current(Run|Streak)/.test(c.text)).map((c) => c.file);
-    expect(hits).toEqual([]);
-  });
-
-  it('never aggregates minutes across people', () => {
-    // The spec's rule: do not write the query. If it exists, a UI will surface it.
-    const hits = corpus
-      .filter((c) => /(total|sum|avg|average|rank|compare)[A-Za-z]*Minutes/i.test(c.text))
-      .map((c) => c.file);
-    expect(hits).toEqual([]);
-  });
-
-  it('exposes no sort of people by performance', () => {
-    const hits = corpus
-      .filter((c) => /sort[A-Za-z]*(?:By)?(?:Points|Score|Rank|Minutes|Days)/i.test(c.text))
-      .map((c) => c.file);
-    expect(hits).toEqual([]);
-  });
-
-  it('uses no flame or at-risk iconography', () => {
-    const hits = corpus.filter((c) => /🔥|flame|fire-?icon/i.test(c.text)).map((c) => c.file);
-    expect(hits).toEqual([]);
-  });
 });
 
 describe('copy module', () => {

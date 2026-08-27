@@ -1,4 +1,6 @@
+import { coveredDays } from './coverage';
 import { scoreDay } from './scoring';
+import { currentStreak } from './streak';
 import {
   RUN_LENGTH_DAYS,
   type DayIndex,
@@ -9,14 +11,14 @@ import {
 } from './types';
 import { pointsWindow } from './window';
 
+export { coveredDays };
+
 /**
- * ADR-001: `currentRun` does not exist.
- *
- * A current-streak value can decrease, and any decreasing number will eventually
- * be rendered on a screen — at which point a single missed day on Day 3 of a
- * 7-day run deletes visible progress with four days still to play. So the
- * concept is absent from the model, not merely hidden from the UI. Every counter
- * below can only increase.
+ * `bestRun`/`daysPractised`/`totalPoints` stay monotonic by design — they are
+ * the honest record of what happened and should never appear to take anything
+ * back. `currentStreak` (see ./streak.ts) is the one figure in `PersonCounters`
+ * that can fall — a deliberate, explicitly-approved reversal of the original
+ * ADR-001. See docs/PRODUCT-SPEC.md, Design Revision 2026-08-27.
  */
 
 /** Days on which this person actually practised. Token days are excluded. */
@@ -24,15 +26,12 @@ export function daysPractised(logs: DayLog[], personId: PersonId): number {
   return logs.filter((l) => l.personId === personId && l.practised).length;
 }
 
-/** Days covered for group-total purposes: practised days plus a spent token. */
-export function coveredDays(state: RunState, personId: PersonId): Set<DayIndex> {
-  const days = new Set<DayIndex>();
-  for (const l of state.logs) {
-    if (l.personId === personId && l.practised) days.add(l.day);
-  }
-  const token = state.tokens.find((t) => t.personId === personId);
-  if (token?.spentOnDay != null) days.add(token.spentOnDay);
-  return days;
+/** Minutes logged across the whole run. Now surfaced and compared on the
+ * leaderboard — see Design Revision 2026-08-27 in docs/PRODUCT-SPEC.md. */
+export function totalMinutes(logs: DayLog[], personId: PersonId): number {
+  return logs
+    .filter((l) => l.personId === personId)
+    .reduce((sum, l) => sum + (l.minutes ?? 0), 0);
 }
 
 /**
@@ -93,5 +92,7 @@ export function personCounters(
     bestRun: bestRun(state, personId),
     totalPoints: totalPoints(state, personId, catchupDays),
     windowPoints: windowPoints(state, personId, today, catchupDays),
+    currentStreak: currentStreak(state, personId, today),
+    totalMinutes: totalMinutes(state.logs, personId),
   };
 }

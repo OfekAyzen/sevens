@@ -2,9 +2,17 @@
  * Domain types for Sevens.
  *
  * Design invariants enforced by this module (see docs/PRODUCT-SPEC.md):
- *  - Every displayed counter is MONOTONIC. Nothing that can decrease is modelled.
- *  - `currentRun` deliberately does not exist. See ADR-001 in the spec.
- *  - Minutes are recorded but never scored and never aggregated across people.
+ *  - `daysPractised`, `bestRun` and `totalPoints` are MONOTONIC — the honest
+ *    record of what happened, and never rendered taking anything back.
+ *  - Minutes are recorded and never scored (the daily ceiling never changes),
+ *    though they are now aggregated and shown on the leaderboard.
+ *
+ * Design Revision — 2026-08-27: `currentStreak`, the ranked leaderboard and the
+ * public catch-up badge were added as an explicitly-approved product decision
+ * to make Sevens a real competitive game. This reverses the original ADR-001
+ * (no losable streak) and the original "no sort by performance" rule. See the
+ * "Design Revision" note near the top of docs/PRODUCT-SPEC.md for the full
+ * rationale — it was a deliberate pivot, not drift.
  */
 
 /** Stable identity for one of the (exactly four) participants. */
@@ -105,7 +113,7 @@ export interface RunState {
   tokens: CoverToken[];
 }
 
-/** Monotonic counters — the only per-person figures any screen may render. */
+/** Per-person figures any screen may render. */
 export interface PersonCounters {
   personId: PersonId;
   /** Days A was logged. Literally true; token days are NOT counted here. */
@@ -116,6 +124,10 @@ export interface PersonCounters {
   totalPoints: number;
   /** Points inside the currently displayed contest window. */
   windowPoints: number;
+  /** Consecutive covered days ending today. Can fall to 0 — see ./streak.ts. */
+  currentStreak: number;
+  /** Minutes logged across the whole run. */
+  totalMinutes: number;
 }
 
 export type GroupBand =
@@ -152,6 +164,21 @@ export interface Reaction {
   emoji: string;
 }
 
+/**
+ * One comment on a post. Stored by the AUTHOR, same pattern as `Reaction`.
+ * Purely social — never scored, never required, never gates anything. See
+ * `Feed.tsx`'s doc comment: the rule against REQUIRING a comment for support
+ * points doesn't ban optional commentary, which is what this is.
+ */
+export interface Comment {
+  id: string;
+  postId: string;
+  personId: PersonId;
+  day: RunDay;
+  text: string;
+  createdAt: string;
+}
+
 /** Everything one person owns. The unit of sync. */
 export interface MemberDoc {
   personId: PersonId;
@@ -161,6 +188,7 @@ export interface MemberDoc {
   token: CoverToken;
   posts: Post[];
   reactions: Reaction[];
+  comments: Comment[];
   /** ISO timestamp, for last-write-wins on this person's own row only. */
   updatedAt: string;
 }

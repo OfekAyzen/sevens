@@ -26,6 +26,10 @@ export const copy = {
 
   nav: {
     back: 'Back',
+    tabHome: 'Home',
+    tabPosts: 'Posts',
+    tabBoard: 'Board',
+    tabSettings: 'Settings',
   },
 
   actions: {
@@ -59,15 +63,21 @@ export const copy = {
     startDateHelp: 'Use the same Day 1 the person who started the group used.',
     namePrompt: 'What should the group call you?',
     back: 'Back',
+    // A short explainer shown once, before Start/Join. The full rules screen
+    // still discloses everything in detail later, before anyone commits.
+    introHeading: 'How this works',
+    introSteps: [
+      'Four people, seven days, four different skills.',
+      'Log what you did each day. Reflecting and posting earn points too.',
+      "Points put you on the leaderboard, and your streak counts the days in a row you've shown up.",
+      'Whoever has the fewest points gets a catch-up bonus, so the board stays close all week.',
+      'The group also has one shared number everyone is aiming for together.',
+    ],
+    introContinue: "Let's go",
   },
 
   sync: {
     heading: 'Group sync',
-    explain:
-      'Paste the two values from your Supabase project so the four of you see each other. One person sets it up and shares them.',
-    url: 'Project URL',
-    key: 'Anon key',
-    optional: 'Leave blank to use the app on your own. You can add it later.',
     offline: 'Solo mode. Nobody else can see this yet.',
     syncing: 'Syncing',
     ok: (members: number, at: string) => `${members} in the group. Last synced ${at}.`,
@@ -85,6 +95,11 @@ export const copy = {
     post: 'Post it',
     supported: 'Supported',
     support: 'Support',
+    // Comments are purely social — never scored, never required. See
+    // Feed.tsx's doc comment for why that's different from the scored
+    // reaction above.
+    commentPrompt: 'Say something',
+    commentPost: 'Comment',
   },
 
   settings: {
@@ -106,7 +121,7 @@ export const copy = {
 
   setup: {
     skillPrompt: 'What are you learning this week?',
-    minimumPrompt: 'What could you still do on your worst day this week?',
+    minimumPrompt: 'What could you still do on your worst day this week, in minutes?',
     minimumHelp: 'Make this small. You can lower it later, but not raise it.',
     cuePrompt: 'When and where will it happen?',
     cueHelp: 'Name a moment and a place. "After I put my coffee down, at the kitchen table."',
@@ -117,6 +132,16 @@ export const copy = {
     pactBody: 'This is the pact. Everyone can see it, and nobody can raise their minimum after today.',
     honourSystem:
       "Minutes aren't scored — inflating them does nothing. This runs on the honour system because there are four of you.",
+    // Shown next to the disabled "begin" button — a disabled button with no
+    // explanation just reads as broken.
+    missing: (items: string[]) => `Still needed: ${joinNames(items)}.`,
+    missingLabels: {
+      name: 'your name',
+      skill: "what you're learning",
+      cue: "when and where it'll happen",
+      feedback: "how you'll know you're improving",
+      code: 'the group code',
+    },
     spacingRationale:
       'Seven short sessions beat one long one — spacing practice out is one of the most reliable findings in learning research. That is why this is daily, and why long sessions do not score extra.',
   },
@@ -153,23 +178,30 @@ export const copy = {
     // Rule 1: both figures only ever increase.
     daysPractised: (n: number) => `Days practised: ${n} of 7.`,
     bestRun: (n: number) => `Best run: ${n}.`,
-    // Rule 6: nothing is at stake, and we say so.
-    nothingAtStake: 'Nothing is at stake. The count only goes up.',
+    // Design Revision 2026-08-27: the streak is now a real, losable stake, so
+    // this no longer says "nothing is at stake" — see docs/PRODUCT-SPEC.md.
+    currentStreak: 'Current streak',
+    rankSummary: (rank: number) => `You're #${rank} of 4 right now`,
     stillTime: 'Still time today if you want it.',
   },
 
   group: {
-    heading: 'The group',
+    heading: 'Leaderboard',
     // Rule 12: a shortfall is stated as a number and a next step, never a cause.
     behind: (total: number, remaining: number) =>
       `${total} of 24. ${remaining} sessions left in the week.`,
     onPace: (total: number) => `${total} of 24. On pace.`,
     ahead: (total: number, by: number) => `${total} of 24. ${by} ahead of pace.`,
     hit: (total: number) => `${total} of 24. Target hit.`,
-    // Rule 7: peers appear as presence, never as rank.
     practisedToday: (names: string[]) => `${joinNames(names)} practised today.`,
     postedToday: (name: string, what: string) => `${name} posted ${what}.`,
     waiting: (n: number) => `${n} of 4 have joined so far.`,
+    // Design Revision 2026-08-27: the row now shows rank, streak, minutes and a
+    // public catch-up badge. See docs/PRODUCT-SPEC.md.
+    rank: (n: number) => `#${n}`,
+    streak: (n: number) => `${n} day streak`,
+    minutes: (n: number) => `${n} min`,
+    catchupBadge: '+2 catch-up',
   },
 
   days: {

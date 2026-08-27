@@ -1,18 +1,53 @@
 import { motion } from 'framer-motion';
-import type { ReactNode } from 'react';
-import { itemVariants, listVariants, pressable, screenVariants, spring } from './motion';
+import type { CSSProperties, ReactNode } from 'react';
+import { FloatingShapes } from './FloatingShapes';
+import {
+  badgePop,
+  flamePulse,
+  itemVariants,
+  listVariants,
+  pressable,
+  screenVariants,
+  spring,
+} from './motion';
 import './components.css';
 
-export function Screen({ children, testId }: { children: ReactNode; testId?: string }) {
+/**
+ * `accent` sets this screen's dominant color identity (e.g. `'var(--p2)'`) —
+ * Design Revision 2026-08-27, round 3: every screen used to default to
+ * `--accent`, which read as one hue everywhere. Omit it to keep that default.
+ *
+ * `scroll` — Design Revision, round 4: `'fixed'` (used by the four tabbed
+ * screens — Home/Feed/Group/Settings) sizes the screen to exactly the space
+ * the tab shell gives it and hides overflow, so the only thing that scrolls
+ * in the main app is the posts list inside Feed (which manages its own
+ * internal scroll region). `'page'` (the default) keeps the original
+ * document-scrolls-if-needed behavior, for the screens outside the tab shell
+ * (Onboard's setup wizard, the Log action screen, the Day-7/8 Finale) where
+ * content genuinely varies in length and a scroll is normal, not a smell.
+ */
+export function Screen({
+  children,
+  testId,
+  accent,
+  scroll = 'page',
+}: {
+  children: ReactNode;
+  testId?: string;
+  accent?: string;
+  scroll?: 'page' | 'fixed';
+}) {
   return (
     <motion.main
-      className="screen"
+      className={`screen ${scroll === 'fixed' ? 'screen--fixed' : ''}`}
       data-testid={testId}
       variants={screenVariants}
       initial="initial"
       animate="enter"
       exit="exit"
+      style={accent ? ({ '--screen-accent': accent } as CSSProperties) : undefined}
     >
+      <FloatingShapes />
       {children}
     </motion.main>
   );
@@ -24,23 +59,47 @@ export function Button({
   variant = 'primary',
   testId,
   disabled,
+  pulse,
 }: {
   children: ReactNode;
   onClick?: () => void;
   variant?: 'primary' | 'quiet' | 'plain';
   testId?: string;
   disabled?: boolean;
+  /** A gentle idle glow pulse, inviting a tap — used sparingly, one CTA at a
+   * time. Pulses a decorative glow BEHIND the button rather than scaling the
+   * button itself: the actual clickable element never moves, so it's exactly
+   * as tappable — real finger or Playwright's actionability check — whether
+   * or not it's mid-pulse. */
+  pulse?: boolean;
 }) {
   return (
-    <motion.button
-      className={`btn btn--${variant}`}
-      onClick={onClick}
-      data-testid={testId}
-      disabled={disabled}
-      {...pressable}
-    >
-      {children}
-    </motion.button>
+    <span style={{ position: 'relative', display: 'block' }}>
+      {pulse && !disabled ? (
+        <motion.span
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: -6,
+            borderRadius: 'var(--r-full)',
+            background: 'var(--screen-accent, var(--accent))',
+            filter: 'blur(10px)',
+            zIndex: -1,
+          }}
+          animate={{ opacity: [0.4, 0.05, 0.4], scale: [1, 1.08, 1] }}
+          transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      ) : null}
+      <motion.button
+        className={`btn btn--${variant}`}
+        onClick={onClick}
+        data-testid={testId}
+        disabled={disabled}
+        {...pressable}
+      >
+        {children}
+      </motion.button>
+    </span>
   );
 }
 
@@ -123,6 +182,38 @@ export function Stat({ label, value }: { label: string; value: string | number }
       <div className="stat__value">{value}</div>
       <div className="stat__label">{label}</div>
     </div>
+  );
+}
+
+/** A leaderboard rank number, medal-coloured for the top three. */
+export function RankBadge({ rank }: { rank: number }) {
+  const medal = rank <= 3 ? ` rank-badge--${rank}` : '';
+  return <span className={`rank-badge${medal}`}>{rank}</span>;
+}
+
+/** The current-streak indicator: a gently pulsing flame plus the day count. */
+export function StreakBadge({ streak, testId }: { streak: number; testId?: string }) {
+  return (
+    <span className="streak-badge" data-testid={testId}>
+      <motion.span className="streak-badge__flame" {...flamePulse} />
+      {streak}
+    </span>
+  );
+}
+
+/** The catch-up bonus badge. Design Revision 2026-08-27: now shown to the
+ * whole group, not just its holder — see docs/PRODUCT-SPEC.md. */
+export function CatchupBadge({ label, testId }: { label: string; testId?: string }) {
+  return (
+    <motion.span
+      className="catchup-badge"
+      data-testid={testId}
+      variants={badgePop}
+      initial="initial"
+      animate="enter"
+    >
+      {label}
+    </motion.span>
   );
 }
 

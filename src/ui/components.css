@@ -1,3 +1,44 @@
+/* App shell — Design Revision, round 4: a fixed-height frame with a
+   persistent tab bar, instead of a single document that scrolls as a whole.
+   Only Feed's post list scrolls inside it (see .posts below); every tabbed
+   screen is sized to fit above the tab bar. */
+.app-shell {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.app-shell__content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.tabbar {
+  flex: 0 0 auto;
+  display: flex;
+  border-top: 1px solid var(--line);
+  background: var(--bg-raised);
+  padding-bottom: var(--safe-bottom);
+}
+.tabbar__item {
+  flex: 1 1 0;
+  background: none;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--s-2) 0;
+  color: var(--text-faint);
+  cursor: pointer;
+  min-height: 56px;
+}
+.tabbar__item.is-active { color: var(--tab-accent, var(--accent)); }
+.tabbar__icon { font-size: 1.25rem; }
+.tabbar__label { font-size: var(--t-xs); font-weight: 600; }
+
 .screen {
   min-height: 100%;
   padding: calc(var(--safe-top) + var(--s-5)) var(--s-4)
@@ -7,30 +48,73 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
+  position: relative;
+  overflow: hidden;
+}
+/* The four tabbed screens: exactly the height the app shell gives them, no
+   page-level scroll. Feed opts its own `.posts` list back into scrolling
+   (below) — everything else is sized to fit. */
+.screen--fixed {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
 }
 
+/* Design Revision — 2026-08-27 (round 3): each screen gets its own dominant
+   hue from the existing --p1..--p4 palette instead of every screen defaulting
+   to --accent. Set inline via the `accent` prop on <Screen>; every rule below
+   that used to hardcode --accent now falls back to it only when a screen
+   hasn't opted into one. */
 .btn {
   border: 0;
   border-radius: var(--r-full);
   padding: var(--s-4) var(--s-5);
   font-size: var(--t-md);
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  min-height: 52px;
+  min-height: 56px;
+  /* Explicit, now that Button's pulse wrapper (a plain block <span>, not a
+     flex child) means the button no longer inherits flex-stretch width. */
+  width: 100%;
+  display: block;
 }
-.btn--primary { background: var(--accent); color: #fff; }
-.btn--quiet { background: var(--bg-raised); color: var(--text); border: 1px solid var(--line); }
+.btn--primary {
+  background: linear-gradient(135deg, var(--screen-accent, var(--accent)), var(--p4) 160%);
+  color: #fff;
+}
+.btn--quiet {
+  background: color-mix(in srgb, var(--screen-accent, var(--accent)) 12%, var(--bg-raised));
+  color: var(--text);
+  border: 1px solid color-mix(in srgb, var(--screen-accent, var(--accent)) 35%, var(--line));
+}
 /* The exit is a plain button with no consequence text and no visual penalty. */
 .btn--plain { background: none; color: var(--text-dim); min-height: 44px; }
 .btn:disabled { opacity: 0.4; }
 
-.hero { text-align: center; padding: var(--s-5) 0 var(--s-3); }
+.hero {
+  text-align: center;
+  padding: var(--s-5) 0 var(--s-3);
+  position: relative;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: -20% -10% auto -10%;
+  height: 160%;
+  background: radial-gradient(closest-side, var(--accent-wash), transparent 70%);
+  z-index: -1;
+  pointer-events: none;
+}
 .hero__value {
   font-size: var(--t-hero);
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
+  background: linear-gradient(135deg, var(--text), var(--accent) 140%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 .hero__of { color: var(--text-dim); font-size: var(--t-lg); margin-top: var(--s-1); }
 
@@ -43,7 +127,7 @@
 }
 .meter__fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+  background: linear-gradient(90deg, var(--accent-dim), var(--screen-accent, var(--accent)));
   border-radius: var(--r-full);
 }
 
@@ -67,8 +151,11 @@
 .cell--future { opacity: 0.5; }
 
 .card {
-  background: var(--bg-raised);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--screen-accent, var(--accent)) 7%, transparent), transparent 55%),
+    var(--bg-raised);
   border: 1px solid var(--line);
+  border-left: 3px solid var(--screen-accent, var(--accent));
   border-radius: var(--r-lg);
   padding: var(--s-4);
   display: flex;
@@ -90,7 +177,11 @@
   background: var(--bg-sunken); border: 1px solid var(--line-strong);
   display: flex; align-items: center; padding: 3px; flex: 0 0 auto;
 }
-.toggle__track.is-on { background: var(--accent); border-color: var(--accent); justify-content: flex-end; }
+.toggle__track.is-on {
+  background: var(--screen-accent, var(--accent));
+  border-color: var(--screen-accent, var(--accent));
+  justify-content: flex-end;
+}
 .toggle__knob { width: 24px; height: 24px; border-radius: var(--r-full); background: #fff; display: block; }
 
 h1 { font-size: var(--t-xl); margin: 0; letter-spacing: -0.02em; }
@@ -105,23 +196,106 @@ textarea { min-height: 96px; resize: vertical; }
 .row { display: flex; gap: var(--s-3); align-items: center; }
 .muted { color: var(--text-faint); font-size: var(--t-sm); }
 
+.rule-row { display: flex; gap: var(--s-3); align-items: flex-start; }
+.rule-row__icon { font-size: var(--t-lg); line-height: 1.4; flex: 0 0 auto; }
+.rule-row p { margin: 0; font-size: var(--t-sm); }
+
 /* Feed ------------------------------------------------------------------ */
-.posts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-3); }
+/* The one place scrolling actually happens in the main app — everything
+   above it (heading, composer) stays put; this fills the rest of the screen
+   and scrolls internally. */
+.posts {
+  list-style: none; margin: 0; padding: 0 0 var(--s-2); display: flex; flex-direction: column; gap: var(--s-4);
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+}
 .post {
-  background: var(--bg-raised); border: 1px solid var(--line);
+  background: var(--bg-raised); border: 2px solid var(--line);
   border-radius: var(--r-lg); padding: var(--s-4);
   display: flex; flex-direction: column; gap: var(--s-2);
+  box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.6);
 }
 .post__head { display: flex; justify-content: space-between; align-items: baseline; }
 .post__who { font-weight: 600; }
 .post__image { width: 100%; border-radius: var(--r-md); display: block; }
+.react-wrap { position: relative; align-self: flex-start; }
 .react {
-  align-self: flex-start; background: var(--bg-sunken); border: 1px solid var(--line-strong);
+  background: var(--bg-sunken); border: 1px solid var(--line-strong);
   color: var(--text-dim); border-radius: var(--r-full);
   padding: var(--s-2) var(--s-4); min-height: 40px; cursor: pointer;
 }
-.react.is-on { background: var(--accent-wash); border-color: var(--accent); color: var(--text); }
+.react.is-on {
+  background: color-mix(in srgb, var(--screen-accent, var(--accent)) 20%, transparent);
+  border-color: var(--screen-accent, var(--accent));
+  color: var(--text);
+}
+.react__burst {
+  position: absolute; top: -4px; left: 50%;
+  pointer-events: none; font-size: var(--t-lg);
+}
+
+.comments { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.comment { font-size: var(--t-sm); color: var(--text-dim); }
+.comment__who { font-weight: 600; color: var(--text); }
+.comment-input { flex: 1 1 auto; }
 
 /* Day 7 before/after ---------------------------------------------------- */
 .beforeafter { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); }
 .beforeafter__side { display: flex; flex-direction: column; gap: var(--s-2); min-width: 0; }
+
+/* Leaderboard ------------------------------------------------------------ */
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) 0;
+}
+.rank-badge {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-full);
+  background: var(--bg-sunken);
+  border: 1px solid var(--line-strong);
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--t-sm);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.rank-badge--1 { background: color-mix(in srgb, var(--rank-gold) 22%, var(--bg-sunken)); border-color: var(--rank-gold); color: var(--rank-gold); }
+.rank-badge--2 { background: color-mix(in srgb, var(--rank-silver) 22%, var(--bg-sunken)); border-color: var(--rank-silver); color: var(--rank-silver); }
+.rank-badge--3 { background: color-mix(in srgb, var(--rank-bronze) 22%, var(--bg-sunken)); border-color: var(--rank-bronze); color: var(--rank-bronze); }
+
+.leaderboard-row__name { font-weight: 600; flex: 1 1 auto; min-width: 0; }
+.leaderboard-row__stats { display: flex; align-items: center; gap: var(--s-3); flex: 0 0 auto; }
+.leaderboard-row__points { font-variant-numeric: tabular-nums; font-weight: 700; }
+
+.streak-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--t-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+.streak-badge__flame {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50% 50% 50% 0;
+  background: linear-gradient(135deg, var(--streak-flame-a), var(--streak-flame-b));
+  transform: rotate(45deg);
+}
+
+.catchup-badge {
+  font-size: var(--t-xs);
+  font-weight: 700;
+  color: var(--screen-accent, var(--accent));
+  background: color-mix(in srgb, var(--screen-accent, var(--accent)) 18%, transparent);
+  border: 1px solid var(--screen-accent, var(--accent));
+  border-radius: var(--r-full);
+  padding: 2px 8px;
+  white-space: nowrap;
+}

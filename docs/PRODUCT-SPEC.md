@@ -11,6 +11,35 @@ disagree, this document follows the evidence and says why.
 
 ---
 
+## Design Revision — 2026-08-27
+
+This spec originally forbade a losable streak, a performance-sorted member
+list, minutes comparison, and a publicly-visible catch-up badge — all on
+fairness grounds (four people learning four different skills cannot be ranked
+by volume without unfairness). That reasoning still holds for what it was
+built to prevent (rewarding whoever has the most free time), which is why the
+24-point daily ceiling is untouched below.
+
+Separately, and as an explicit, deliberate product decision (not drift, and
+not a workaround of the guard tests that enforced the original rules), Sevens
+now also adds:
+
+- A real **current streak** per person, which can fall to 0. (Reverses ADR-001.)
+- A **ranked leaderboard** — the four people sorted by current contest score,
+  not alphabetically. (Reverses §2's "alphabetically fixed row" rule and §8
+  trap #5.)
+- **Minutes**, summed and shown per person on the leaderboard. (Reverses the
+  "minutes in any shared view" rule and §8 trap #12.)
+- The **catch-up bonus badge**, now visible to the whole group rather than
+  only its holder. (Reverses §4's privacy rule and §8 trap #7.)
+
+Every section below that still describes the old behavior has been updated in
+place; where a passage is quoted for historical context, it's marked as such.
+The 24-point ceiling, the 2-notifications-per-day cap, the tone/guilt/urgency
+copy rules, and the "no red for errors" visual rule are all **unchanged**.
+
+---
+
 ## 0. The two design problems
 
 1. **Four people, four incommensurable skills, one contest.** Guitar minutes are
@@ -131,8 +160,11 @@ maximum; a second session adds nothing. No partial credit, no quality weighting.
   deficit, never a cause. Good: *"11 of 24. Fourteen sessions left in the week."*
   Bad: *"You're 3 behind — someone needs to step up."*
 - **Never attribute a shortfall to a person.** No per-person contribution ranking.
-  Individual counts appear only as an unranked, **alphabetically fixed** row of
-  four names, never sorted by value.
+  ~~Individual counts appear only as an unranked, **alphabetically fixed** row of
+  four names, never sorted by value.~~ **Superseded, Design Revision 2026-08-27:**
+  the group screen is now a leaderboard, sorted by current contest score. The
+  rule against attributing a *shortfall* to a person still holds — the sort
+  shows who's ahead, not why anyone is behind.
 
 ### What the group gets
 
@@ -142,9 +174,9 @@ single shared summary card is exportable — **not gated** behind hitting 24.
 
 ---
 
-## 3. Counters and the streak problem
+## 3. Counters and the streak
 
-### The only counters that exist — all monotonic
+### The monotonic counters
 
 ```
 days_practised(person)   0..7   literal: days A was logged. Only increases.
@@ -153,19 +185,33 @@ group_total              0..28  only increases.
 process_points(person)   only increases.
 ```
 
-### ADR-001: `current_run` does not exist
+These four stay monotonic — they're the honest record of what happened, and
+never appear to take anything back.
 
-Do not compute it, store it, or derive it for a UI. A current-run value can
-decrease, and any decreasing number will eventually be rendered decreasing. In a
-7-day contest, a Day 3 miss would then delete the promised outcome with four days
-still on the clock — the abstinence-violation ("what-the-hell") effect, and the
-single most likely cause of someone abandoning the week.
+### `current_streak`: reversed by Design Revision 2026-08-27
 
-`best_run` counts token-bridged days as continuous. `days_practised` does not — it
-stays literally true.
+**Historical context — this was the original rule, kept for the record:**
+> ADR-001: `current_run` does not exist. Do not compute it, store it, or derive
+> it for a UI. A current-run value can decrease, and any decreasing number will
+> eventually be rendered decreasing. In a 7-day contest, a Day 3 miss would then
+> delete the promised outcome with four days still on the clock — the
+> abstinence-violation ("what-the-hell") effect, and the single most likely
+> cause of someone abandoning the week.
 
-Duolingo's own published data supports the lenient direction: doubling streak
-freezes *increased* engagement (+0.38% DAU). More forgiveness, not less.
+That risk is real and wasn't refuted — it was consciously accepted as the
+tradeoff for a genuinely game-like feel, an explicit product decision rather
+than something that crept in. `current_streak(person)` now exists
+(`src/domain/streak.ts`): the consecutive run of covered days ending today,
+falling to 0 the day after a gap. `best_run` is unaffected and stays
+monotonic, so the longest run ever achieved is never lost even when the
+current one resets.
+
+Duolingo's own published data cuts both ways here: streak freezes increase
+engagement (+0.38% DAU, more forgiveness), but the streak mechanic itself is
+also one of the most-cited examples of habit-gamification working *because* of
+its loss aversion. Sevens accepts that tradeoff for four consenting friends
+over seven days; it would not be the right call for a longer-running or
+less socially-intimate product.
 
 ### The 4am day boundary
 
@@ -197,22 +243,28 @@ freezes *increased* engagement (+0.38% DAU). More forgiveness, not less.
 
 ### Never ship
 
-**Strings:** "Streak lost/broken" · "Back to zero" · "Start again" · "Don't lose
-your streak" · "Your streak is at risk" · "X hours left" · any countdown to the
-boundary · "You're in 4th" · "Last place" · "You're behind" · "3 friends are ahead
-of you" · "Everyone else has practised today" · "You only did X minutes" · "That's
-less than yesterday" · "Dana used a cover day" · "Dana hasn't practised in 2 days"
-· "Are you sure you want to give up?" · any confirmshaming decline label · "We
-miss you" · "Where have you been?" · "Build a lasting habit in 7 days" · the word
-"failed" · `0` rendered as a state rather than a count.
+**Design Revision 2026-08-27:** minutes-in-shared-view and sort-by-performance
+as *mechanics* are superseded — see the Design Revision note near the top of
+this document. The word "streak" itself is no longer banned — it's now a real,
+named mechanic. But the shaming/reset **prose** below is still banned: a real
+streak and a real rank are shown as plain numbers, never as this kind of
+sentence.
 
-**Mechanics:** any displayed value that can decrease · any flame/at-risk icon ·
-app-icon badge counts · red dots · a nudge/poke/remind-them button (*in a group of
-four this is a weapon, and it will be used as one, once, and remembered*) ·
-peer-approval voting on someone's log · mystery boxes, spin-to-win, variable
-multipliers, surprise bonuses · infinite scroll, autoplay, pull-to-refresh on the
-feed · minutes in any shared view · sorting the four names by any performance
-value.
+**Strings:** "Don't lose your streak" · "Your streak is at risk" · "Back to
+zero" · "Start again" · "X hours left" · any countdown to the boundary ·
+"You're in 4th" · "Last place" · "You're behind" · "3 friends are ahead of
+you" · "Everyone else has practised today" · "That's less than yesterday" ·
+"Dana hasn't practised in 2 days" · "Are you sure you want to give up?" · any
+confirmshaming decline label · "We miss you" · "Where have you been?" ·
+"Build a lasting habit in 7 days" · the word "failed" · `0` rendered as a
+state rather than a count.
+
+**Mechanics:** app-icon badge counts · red dots (as *error/warning* indicators —
+the streak-flame accent is a celebratory color, not this) · a nudge/poke/
+remind-them button (*in a group of four this is a weapon, and it will be used
+as one, once, and remembered*) · peer-approval voting on someone's log ·
+mystery boxes, spin-to-win, variable multipliers, surprise bonuses · infinite
+scroll, autoplay, pull-to-refresh on the feed.
 
 ---
 
@@ -259,8 +311,12 @@ never rewards absence.
   rule for everyone."*
 - Whether it is **active for you** appears **only in your own view**: *"Catch-up is
   on for you today: reflecting and posting are worth 2 extra."*
-- The shared board shows totals only. **No "+2" annotations, no badge, no icon.**
-  If a viewer can identify the holder, you have built a last-place indicator.
+- ~~The shared board shows totals only. No "+2" annotations, no badge, no icon.
+  If a viewer can identify the holder, you have built a last-place indicator.~~
+  **Superseded, Design Revision 2026-08-27:** the leaderboard now shows a
+  "+2 catch-up" badge next to any current holder, visible to the whole group.
+  Since the badge sits on the lowest-scoring row(s) by construction, this is a
+  known, accepted tradeoff of making the leaderboard real rather than partial.
 - Phrase it as need, never pity: *"The group needs your days."*
 
 ### Lowering your own minimum
@@ -400,7 +456,8 @@ good at this" to "what am I learning about practising."
 
 Midpoint reset fires. Group total at halfway with an explicitly reachable back-half
 figure: *"14 of 24. Ten more sessions gets you there — that's under three each."*
-Catch-up active, shown only to holders. The one permitted check-in goes out.
+Catch-up active, shown on the leaderboard to the whole group (Design Revision
+2026-08-27 — see §4). The one permitted check-in goes out.
 
 ### Day 5 — *the pull.*
 
@@ -448,18 +505,24 @@ previous seven days feel like a funnel.
 **Irreversible**
 1. **Not capturing a Day 1 baseline artefact.** Day 7's emotional payload cannot be
    retrofitted on Day 6. If you build one thing first, build this.
-2. **Letting `current_run` exist anywhere.** Delete the concept, not just the view.
+2. ~~Letting `current_run` exist anywhere.~~ **Superseded, Design Revision
+   2026-08-27:** `current_streak` now exists on purpose (`src/domain/streak.ts`)
+   — see §3.
 
 **Hierarchy inversions**
-3. Making the group goal decorative while a leaderboard is the hero — all of the
-   social-comparison harm, none of the cooperative benefit.
+3. Making the group goal decorative while the leaderboard crowds it out — the
+   group number must stay the single largest element on screen (still true and
+   still tested), even with a real leaderboard one screen away.
 4. Setting the group target at 28/28.
-5. Sorting the four names by performance. A sorted list is a leaderboard whatever
-   you call it.
+5. ~~Sorting the four names by performance. A sorted list is a leaderboard
+   whatever you call it.~~ **Superseded, Design Revision 2026-08-27:** it is
+   now, deliberately, a leaderboard (`src/domain/leaderboard.ts`).
 
 **Timing and disclosure**
 6. Making the Day 4 reset a surprise.
-7. Letting the catch-up bonus be inferable from a shared view.
+7. ~~Letting the catch-up bonus be inferable from a shared view.~~
+   **Superseded, Design Revision 2026-08-27:** it's shown directly now, not
+   merely inferable — see §4.
 8. Requesting notification permission on first launch.
 9. Sending the cue reminder after they have already logged.
 
@@ -468,11 +531,15 @@ previous seven days feel like a funnel.
     the Day 3 callback, the Day 8 report, and the reason reflections are scored.
 11. Requiring a written comment for support points. Reactions must count, or Day 4
     support collapses to zero.
-12. Recording minutes and then surfacing them "because we have the data."
+12. ~~Recording minutes and then surfacing them "because we have the data."~~
+    **Superseded, Design Revision 2026-08-27:** minutes are now aggregated and
+    shown on the leaderboard as an explicit decision, not an incidental one.
 
 **Tone**
-13. A celebration animation on every log. Enthusiasm inflation makes Day 7 worth
-    nothing.
+13. ~~A celebration animation on every log. Enthusiasm inflation makes Day 7 worth
+    nothing.~~ **Superseded, Design Revision 2026-08-27:** every log now gets a
+    confetti burst and a haptic tap (`src/ui/confetti.ts`), deliberately smaller
+    in scale than the Day 7 reveal so it still lands as the biggest moment.
 14. Writing the reminder in the app's voice. "Time to practise!" is a system nag;
     their own sentence is a held commitment. Same push, different psychology.
 15. Adding a nudge button because it seems friendly.

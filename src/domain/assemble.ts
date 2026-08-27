@@ -1,4 +1,4 @@
-import type { DayLog, Group, MemberDoc, PersonId, Post, RunDay, RunState } from './types';
+import type { Comment, DayLog, Group, MemberDoc, PersonId, Post, RunDay, RunState } from './types';
 
 /**
  * Assemble the shared RunState from independently-owned member documents.
@@ -50,6 +50,16 @@ export function allPosts(members: MemberDoc[]): Post[] {
   return members
     .flatMap((m) => m.posts)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+/**
+ * Comments from every member, oldest first — reading order, unlike
+ * `allPosts`. Purely social: never scored, never required.
+ */
+export function allComments(members: MemberDoc[]): Comment[] {
+  return members
+    .flatMap((m) => m.comments ?? [])
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
 /** Who practised on a given day. Used by the digest; never who did NOT. */

@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useEffect, useRef } from 'react';
 import { copy } from '../domain/copy';
 import { groupBand } from '../domain/group';
 import { personalReport } from '../domain/report';
@@ -6,7 +7,10 @@ import { GROUP_TARGET } from '../domain/types';
 import { revealVariants } from '../ui/motion';
 import { useDerived } from '../store/derived';
 import { useRun } from '../store/run';
-import { Button, Card, GroupNumber, Screen } from '../ui/components';
+import { Buddy } from '../ui/Buddy';
+import { Button, Card, GroupNumber, RankBadge, Screen } from '../ui/components';
+import { finaleBurst } from '../ui/confetti';
+import { playCelebrate } from '../ui/sound';
 
 /**
  * Day 7 and Day 8.
@@ -19,6 +23,11 @@ import { Button, Card, GroupNumber, Screen } from '../ui/components';
  * The single reveal animation in the whole application lives on this screen. It
  * is worth something precisely because Day 2 got `Logged. Day 2.` and nothing else.
  *
+ * Design Revision 2026-08-27 (see docs/PRODUCT-SPEC.md): the reveal now fires a
+ * bigger confetti cannon and shows final leaderboard placement — an explicitly-
+ * approved reversal of the original "never compare artefacts" spirit as applied
+ * to points (artefacts themselves are still never compared to each other).
+ *
  * Day 8 hands back the data and offers a clean exit. There is deliberately no
  * "start another week" prompt: an app with no growth motive should be willing to
  * end, and visibly ending is the strongest signal that the week was on the level.
@@ -26,16 +35,37 @@ import { Button, Card, GroupNumber, Screen } from '../ui/components';
 export function Finale({ onBack, now = new Date() }: { onBack: () => void; now?: Date }) {
   const d = useDerived(now);
   const exportAll = useRun((s) => s.exportAll);
+  const celebrated = useRef(false);
+
+  useEffect(() => {
+    if (d && !celebrated.current) {
+      celebrated.current = true;
+      finaleBurst();
+      playCelebrate();
+    }
+  });
+
   if (!d) return null;
 
   const band = groupBand(d.total);
   const report = personalReport(d.myDoc, d.day);
+  const myRank = d.leaderboard.find((row) => row.personId === d.me)?.rank ?? d.leaderboard.length;
+  const myHue = `var(--p${(d.members.findIndex((m) => m.personId === d.me) % 4) + 1})`;
 
   return (
     <Screen testId="finale">
+      <div className="row" style={{ justifyContent: 'center' }}>
+        <Buddy state="celebrate" hue={myHue} size={140} testId="buddy" />
+      </div>
+
       <motion.div variants={revealVariants} initial="initial" animate="enter">
         <GroupNumber total={d.total} target={GROUP_TARGET} />
       </motion.div>
+
+      <p className="row" style={{ justifyContent: 'center', gap: 'var(--s-2)' }} data-testid="final-rank">
+        <RankBadge rank={myRank} />
+        <span className="muted">{copy.counters.rankSummary(myRank)}</span>
+      </p>
 
       {band.label ? (
         <h1 data-testid="band" style={{ textAlign: 'center' }}>

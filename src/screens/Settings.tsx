@@ -19,7 +19,7 @@ import { Button, Card, Screen } from '../ui/components';
  * Notification toggles are independent and private — the group is never told who
  * has them off.
  */
-export function Settings({ onBack, now = new Date() }: { onBack: () => void; now?: Date }) {
+export function Settings({ now = new Date() }: { now?: Date }) {
   const d = useDerived(now);
   const lowerMinimum = useRun((s) => s.lowerMinimum);
   const setReminder = useRun((s) => s.setReminder);
@@ -40,7 +40,7 @@ export function Settings({ onBack, now = new Date() }: { onBack: () => void; now
   }
 
   return (
-    <Screen testId="settings">
+    <Screen testId="settings" scroll="fixed">
       <h1>{copy.settings.heading}</h1>
 
       <Card testId="sync-status">
@@ -128,9 +128,6 @@ export function Settings({ onBack, now = new Date() }: { onBack: () => void; now
         </Button>
       </Card>
 
-      <Button variant="quiet" onClick={onBack} testId="back">
-        {copy.nav.back}
-      </Button>
       <Button variant="plain" testId="reset" onClick={() => void reset()}>
         {copy.settings.resetAll}
       </Button>

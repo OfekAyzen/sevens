@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bestRun, coveredDays, daysPractised, personCounters } from '../../src/domain/counters';
+import { bestRun, coveredDays, daysPractised, personCounters, totalMinutes } from '../../src/domain/counters';
 import { catchupHolders } from '../../src/domain/catchup';
 import type { DayIndex, RunState } from '../../src/domain/types';
 import { FOUR, makeLog, makeRun, perfectLog } from './factories';
@@ -45,10 +45,15 @@ describe('bestRun', () => {
   });
 });
 
-describe('the missing currentRun', () => {
-  it('is absent from the counters module surface (ADR-001)', async () => {
-    const mod = await import('../../src/domain/counters');
-    expect(Object.keys(mod).some((k) => /current(Run|Streak)/i.test(k))).toBe(false);
+describe('totalMinutes', () => {
+  it('sums minutes across the whole run, ignoring logs with none entered', () => {
+    const logs = [
+      makeLog({ personId: 'ofek', day: 1, practised: true, minutes: 10 }),
+      makeLog({ personId: 'ofek', day: 2, practised: true, minutes: null }),
+      makeLog({ personId: 'ofek', day: 3, practised: true, minutes: 15 }),
+      makeLog({ personId: 'dana', day: 1, practised: true, minutes: 100 }),
+    ];
+    expect(totalMinutes(logs, 'ofek')).toBe(25);
   });
 });
 

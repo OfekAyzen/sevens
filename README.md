@@ -61,33 +61,39 @@ Store distribution.
 
 ---
 
-## Let the four of you see each other
+## Seeing your friends
 
-The app works fully on its own with no setup — you just won't see your friends.
-Group sync needs one free Supabase project, created once by one person.
+Group sync is built in — nobody who plays the app configures anything. Everyone
+just creates or joins a group with the code, sets the same **Day 1** date, and
+their phones sync automatically in the background.
+
+Each phone only ever writes its **own** document, so four people logging at once
+cannot conflict. The app syncs on launch, every 60 seconds while open, and
+whenever it regains focus. Everything works offline and uploads when it next
+reaches the network. With no database configured at all (see below), the app
+still works fully solo — you just won't see your friends.
+
+### Maintaining the shared database (you, once, not your friends)
+
+Sync talks to one Supabase project over plain `fetch` — no SDK, no accounts, the
+group code is the only shared secret (see
+[`src/sync/schema.sql`](src/sync/schema.sql)). One-time setup:
 
 1. Make a project at [supabase.com](https://supabase.com) (free tier is plenty).
 2. **SQL Editor → New query**, paste
    [`src/sync/schema.sql`](src/sync/schema.sql), run it.
 3. **Project Settings → API**, copy the **Project URL** and the **anon public**
    key.
-4. Share three things in the group chat: the URL, the anon key, and the **group
-   code** the app showed you when you created the group.
-5. Everyone else taps **Join a group**, enters the code, and pastes the URL and
-   key. Set the same **Day 1** date so everyone's day numbering matches.
+4. Copy [`env.example`](env.example) to `.env` (rename it — `.env` is gitignored)
+   and fill in `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` with those two
+   values.
+5. `npm run apk:debug` (or `npm run build`) bakes them into the build. Nobody
+   who installs the resulting APK ever sees a database field.
 
-### What that means for privacy
-
-The group code is the only secret. Anyone who has it, plus the URL and anon key,
-can read and write that group's data — there are no accounts, which is the
-trade-off that makes setup a two-minute job instead of an auth system. That is the
-right call for four friends and the wrong one for anything public. Don't reuse the
-project for something that matters, and don't post the code publicly.
-
-Each phone only ever writes its **own** document, so four people logging at once
-cannot conflict. The app syncs on launch, every 60 seconds while open, and
-whenever it regains focus. Everything works offline and uploads when it next
-reaches the network.
+Anyone who has a group's code can read and write that group's data through this
+project — there are no accounts. That's the right call for four friends and the
+wrong one for anything public: don't reuse the project for something that
+matters, and don't post a group code publicly.
 
 ---
 

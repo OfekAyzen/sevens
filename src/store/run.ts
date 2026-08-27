@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { assemble, emptyLog, withResolvedSupport } from '../domain/assemble';
+import { defaultSyncConfig } from '../config';
 import type {
+  Comment,
   DayLog,
   Declaration,
   Group,
@@ -44,6 +46,7 @@ interface Store extends Persisted {
   saveLog: (day: RunDay, patch: Partial<DayLog>) => Promise<void>;
   addPost: (day: RunDay, caption: string, image?: string) => Promise<void>;
   react: (post: Post, emoji: string, day: RunDay) => Promise<void>;
+  addComment: (postId: string, day: RunDay, text: string) => Promise<void>;
   spendToken: (day: RunDay) => Promise<void>;
   lowerMinimum: (minutes: number) => Promise<void>;
   setReminder: (time: string | null) => Promise<void>;
@@ -86,6 +89,7 @@ function newDoc(displayName: string, declaration: Declaration): MemberDoc {
     token: { personId: declaration.personId, spentOnDay: null },
     posts: [],
     reactions: [],
+    comments: [],
     updatedAt: new Date().toISOString(),
   };
 }
@@ -153,14 +157,26 @@ export const useRun = create<Store>((set, get) => {
 
     async createGroup(code, startDate, displayName, declaration) {
       const doc = newDoc(displayName, declaration);
-      set({ group: { code, startDate }, me: doc.personId, myDoc: doc, members: [doc] });
+      set({
+        group: { code, startDate },
+        me: doc.personId,
+        myDoc: doc,
+        members: [doc],
+        sync: defaultSyncConfig,
+      });
       await persist();
       await get().syncNow();
     },
 
     async joinGroup(code, startDate, displayName, declaration) {
       const doc = newDoc(displayName, declaration);
-      set({ group: { code, startDate }, me: doc.personId, myDoc: doc, members: [doc] });
+      set({
+        group: { code, startDate },
+        me: doc.personId,
+        myDoc: doc,
+        members: [doc],
+        sync: defaultSyncConfig,
+      });
       await persist();
       await get().syncNow();
     },
@@ -204,6 +220,22 @@ export const useRun = create<Store>((set, get) => {
         ? myDoc.reactions.filter((r) => r.postId !== post.id)
         : [...myDoc.reactions, { postId: post.id, targetPersonId: post.personId, day, emoji }];
       await commit({ ...myDoc, reactions });
+    },
+
+    async addComment(postId, day, text) {
+      const { myDoc, me } = get();
+      const trimmed = text.trim();
+      if (!myDoc || !me || trimmed.length === 0) return;
+      const comment: Comment = {
+        id: `${me}-${postId}-${Date.now().toString(36)}`,
+        postId,
+        personId: me,
+        day,
+        text: trimmed,
+        createdAt: new Date().toISOString(),
+      };
+      // `?? []` covers a doc persisted before comments existed.
+      await commit({ ...myDoc, comments: [...(myDoc.comments ?? []), comment] });
     },
 
     async spendToken(day) {

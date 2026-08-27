@@ -17,7 +17,7 @@
     "verify": "npm run typecheck && npm run lint && npm run test && npm run test:e2e",
     "verify:fast": "npm run typecheck && npm run lint && npm run test",
     "cap:sync": "npm run build && npx cap sync android",
-    "apk:debug": "npm run cap:sync && cd android && ./gradlew assembleDebug"
+    "apk:debug": "npm run cap:sync && (if not exist C:\\gradle-tmp mkdir C:\\gradle-tmp) && cd android && set \"TEMP=C:\\gradle-tmp\" && set \"TMP=C:\\gradle-tmp\" && .\\gradlew.bat assembleDebug"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
@@ -28,6 +28,7 @@
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.3",
+    "canvas-confetti": "^1.9.3",
     "framer-motion": "^13.1.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
@@ -38,6 +39,7 @@
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.6",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",

@@ -15,6 +15,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 async function createGroup(page: Page) {
   await page.goto('/');
+  await page.getByTestId('intro-continue').click();
   await page.getByTestId('mode-create').click();
   await page.getByTestId('input-name').fill('Ofek');
   await page.getByTestId('input-skill').fill('fingerstyle guitar');
@@ -31,6 +32,49 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(() => localStorage.clear());
 });
 
+test('no console errors while walking the main screens', async ({ page }) => {
+  // Catches what an assertion on rendered text can't — e.g. a malformed SVG
+  // path attribute in Buddy that React/the browser logs but doesn't throw on,
+  // so the screen still "looks fine" while quietly spamming the console.
+  const errors: string[] = [];
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') errors.push(msg.text());
+  });
+  page.on('pageerror', (err) => errors.push(err.message));
+
+  await createGroup(page);
+  await page.getByTestId('go-log').click();
+  await page.getByTestId('toggle-cue').click();
+  await page.getByTestId('input-reflection').fill('a quick note');
+  await page.getByTestId('save-log').click();
+  await expect(page.getByTestId('home')).toBeVisible();
+  await page.getByTestId('tab-group').click();
+  await page.getByTestId('tab-home').click();
+  await page.getByTestId('tab-feed').click();
+  await page.getByTestId('tab-home').click();
+  await page.getByTestId('tab-settings').click();
+
+  expect(errors, `console errors:\n${errors.join('\n')}`).toEqual([]);
+});
+
+test('the begin button explains what is still missing instead of just staying disabled', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('intro-continue').click();
+  await page.getByTestId('mode-create').click();
+
+  const begin = page.getByTestId('begin');
+  await expect(begin).toBeDisabled();
+  await expect(page.getByTestId('missing-fields')).toContainText('Still needed');
+
+  await page.getByTestId('input-name').fill('Ofek');
+  await page.getByTestId('input-skill').fill('fingerstyle guitar');
+  await page.getByTestId('input-cue').fill('after I put my coffee down, at the kitchen table');
+  await page.getByTestId('input-feedback').fill('record myself and listen back');
+
+  await expect(page.getByTestId('missing-fields')).toHaveCount(0);
+  await expect(begin).toBeEnabled();
+});
+
 test('a new person can create a group and reach home', async ({ page }) => {
   await createGroup(page);
   await expect(page.getByTestId('group-number')).toBeVisible();
@@ -39,14 +83,24 @@ test('a new person can create a group and reach home', async ({ page }) => {
 
 test('creating a group produces a shareable code', async ({ page }) => {
   await page.goto('/');
+  await page.getByTestId('intro-continue').click();
   await page.getByTestId('mode-create').click();
   const code = await page.getByTestId('group-code').inputValue();
   // Six characters, no ambiguous glyphs — this gets retyped from a group chat.
   expect(code).toMatch(/^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/);
 });
 
+test('a new person sees a short how-it-works screen before choosing create or join', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('onboard-intro')).toBeVisible();
+  await expect(page.getByTestId('mode-create')).not.toBeVisible();
+  await page.getByTestId('intro-continue').click();
+  await expect(page.getByTestId('onboard-choose')).toBeVisible();
+});
+
 test('the rules are published in full before anyone commits', async ({ page }) => {
   await page.goto('/');
+  await page.getByTestId('intro-continue').click();
   await page.getByTestId('mode-create').click();
   const rules = page.getByTestId('rules');
   // Nobody should discover the midpoint reset or the catch-up rule mid-week.
@@ -121,9 +175,11 @@ test('a past day with nothing logged looks exactly like a future day', async ({ 
 });
 
 test('no banned string reaches the rendered page', async ({ page }) => {
+  // Design Revision 2026-08-27 (see docs/PRODUCT-SPEC.md): "streak" is no
+  // longer banned — the app now shows a real, losable current streak on
+  // purpose. The remaining tone/guilt/urgency phrases are still banned.
   await createGroup(page);
   const banned = [
-    'streak',
     "don't lose",
     'at risk',
     'last place',
@@ -134,19 +190,28 @@ test('no banned string reaches the rendered page', async ({ page }) => {
     'failed',
     'give up',
   ];
-  for (const view of ['go-feed', 'go-group', 'go-settings']) {
+  for (const tab of ['tab-feed', 'tab-group', 'tab-settings']) {
     await page.getByTestId('home').waitFor();
     const body = (await page.locator('body').innerText()).toLowerCase();
     for (const phrase of banned) {
       expect(body, `banned phrase rendered on home: ${phrase}`).not.toContain(phrase);
     }
-    await page.getByTestId(view).click();
+    await page.getByTestId(tab).click();
     const inner = (await page.locator('body').innerText()).toLowerCase();
     for (const phrase of banned) {
-      expect(inner, `banned phrase rendered in ${view}: ${phrase}`).not.toContain(phrase);
+      expect(inner, `banned phrase rendered in ${tab}: ${phrase}`).not.toContain(phrase);
     }
-    await page.getByTestId('back').click();
+    await page.getByTestId('tab-home').click();
   }
+});
+
+test('the leaderboard shows rank, streak and points for a solo run', async ({ page }) => {
+  await createGroup(page);
+  await page.getByTestId('tab-group').click();
+  await expect(page.getByTestId('people')).toBeVisible();
+  const row = page.locator('.leaderboard-row').first();
+  await expect(row).toContainText('1'); // rank badge
+  await expect(row.locator('.streak-badge')).toBeVisible();
 });
 
 test('the log screen offers a plain exit with no consequence copy', async ({ page }) => {
@@ -160,7 +225,7 @@ test('the log screen offers a plain exit with no consequence copy', async ({ pag
 
 test('posting proof appears in the feed and scores', async ({ page }) => {
   await createGroup(page);
-  await page.getByTestId('go-feed').click();
+  await page.getByTestId('tab-feed').click();
   await expect(page.getByTestId('feed-empty')).toBeVisible();
   await page.getByTestId('input-caption').fill('twenty F-chord changes, slowly');
   await page.getByTestId('post').click();
@@ -169,9 +234,25 @@ test('posting proof appears in the feed and scores', async ({ page }) => {
   await expect(page.locator('.react')).toHaveCount(0);
 });
 
+test('a post can be commented on — unscored, unlike the reaction', async ({ page }) => {
+  await createGroup(page);
+  await page.getByTestId('tab-feed').click();
+  await page.getByTestId('input-caption').fill('twenty F-chord changes, slowly');
+  await page.getByTestId('post').click();
+
+  const post = page.locator('.post').first();
+  const postId = await post.getAttribute('data-post-id');
+  const commentInput = page.getByTestId(`input-comment-${postId}`);
+  await commentInput.fill('sounding cleaner already');
+  await page.getByTestId(`add-comment-${postId}`).click();
+
+  await expect(post.locator('.comments')).toContainText('sounding cleaner already');
+  await expect(commentInput).toHaveValue('');
+});
+
 test('the cover day is one tap with no confirmation dialog', async ({ page }) => {
   await createGroup(page);
-  await page.getByTestId('go-settings').click();
+  await page.getByTestId('tab-settings').click();
   await expect(page.getByTestId('cover-card')).toContainText('one cover day');
   const cover = page.getByTestId('cover-1');
   if (await cover.isVisible()) {
@@ -183,7 +264,7 @@ test('the cover day is one tap with no confirmation dialog', async ({ page }) =>
 
 test('lowering the minimum works and cannot raise it', async ({ page }) => {
   await createGroup(page);
-  await page.getByTestId('go-settings').click();
+  await page.getByTestId('tab-settings').click();
   await expect(page.getByTestId('minimum-card')).toContainText('10 minutes');
 
   await page.getByTestId('input-new-minimum').fill('5');
@@ -198,7 +279,7 @@ test('lowering the minimum works and cannot raise it', async ({ page }) => {
 
 test('settings shows the group code so friends can join', async ({ page }) => {
   await createGroup(page);
-  await page.getByTestId('go-settings').click();
+  await page.getByTestId('tab-settings').click();
   await expect(page.getByTestId('sync-status')).toContainText(/[A-Z2-9]{6}/);
   await expect(page.getByTestId('sync-line')).toContainText('Solo mode');
 });

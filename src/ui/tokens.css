@@ -1,10 +1,12 @@
 /*
  * Design tokens.
  *
- * The palette is deliberately calm. This app is used once a day for ninety
- * seconds, in the evening, by someone who may have had a bad day — so it reads as
- * a quiet notebook rather than a game. There is no red anywhere in the system:
- * nothing in this product is an error or a warning.
+ * Design Revision — 2026-08-27 (see docs/PRODUCT-SPEC.md): the app now leans
+ * into a brighter, game-like palette on purpose — a deliberate, explicitly-
+ * approved pivot from the original "quiet notebook" direction. There is still
+ * no red used for errors or warnings (nothing in this product IS an error);
+ * the warm streak-flame gradient below is a celebratory accent, not a red
+ * error color.
  */
 :root {
   color-scheme: dark;
@@ -19,16 +21,25 @@
   --text-dim: #9aa1b4;
   --text-faint: #626a7e;
 
-  --accent: #7c5cff;
+  --accent: #8b5cf6;
   --accent-dim: #5b43c4;
-  --accent-wash: #7c5cff1f;
+  --accent-wash: #8b5cf61f;
 
-  /* Each person gets a fixed hue, assigned at setup and never reused as a
-     ranking signal. */
-  --p1: #7c5cff;
-  --p2: #3fb8af;
-  --p3: #e0a33e;
-  --p4: #d76a9c;
+  /* Each person gets a fixed hue, assigned at setup. Raised saturation for a
+     livelier feel — still never reused as a ranking signal in itself. */
+  --p1: #8b5cf6;
+  --p2: #22d3c9;
+  --p3: #f5a524;
+  --p4: #ef5da8;
+
+  /* Leaderboard rank accents, top three only. */
+  --rank-gold: #ffcc4d;
+  --rank-silver: #c7cedb;
+  --rank-bronze: #e2984f;
+
+  /* Streak flame — a warm celebratory gradient, not an error color. */
+  --streak-flame-a: #ff9d3c;
+  --streak-flame-b: #ff5c72;
 
   --r-sm: 8px;
   --r-md: 14px;
@@ -62,7 +73,13 @@
 html, body, #root {
   margin: 0;
   height: 100%;
-  background: var(--bg);
+  background:
+    radial-gradient(circle at 10% -12%, color-mix(in srgb, var(--p1) 34%, transparent), transparent 46%),
+    radial-gradient(circle at 105% 0%, color-mix(in srgb, var(--p3) 28%, transparent), transparent 42%),
+    radial-gradient(circle at 90% 55%, color-mix(in srgb, var(--p4) 22%, transparent), transparent 46%),
+    radial-gradient(circle at 50% 120%, color-mix(in srgb, var(--p2) 26%, transparent), transparent 52%),
+    var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   font-family: var(--font);
   font-size: var(--t-md);

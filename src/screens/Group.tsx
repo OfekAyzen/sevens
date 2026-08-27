@@ -1,44 +1,82 @@
+import { motion } from 'framer-motion';
+import { useEffect, useRef } from 'react';
 import { copy } from '../domain/copy';
-import { coveredDays } from '../domain/counters';
 import { GROUP_TARGET } from '../domain/types';
 import { useDerived } from '../store/derived';
-import { Button, Card, GroupNumber, Screen } from '../ui/components';
+import { Buddy } from '../ui/Buddy';
+import { reorderTransition } from '../ui/motion';
+import { playRankUp } from '../ui/sound';
+import {
+  Card,
+  CatchupBadge,
+  GroupNumber,
+  RankBadge,
+  Screen,
+  StreakBadge,
+} from '../ui/components';
 
 /**
- * The group screen.
+ * The leaderboard.
  *
- * The four rows are ordered ALPHABETICALLY and never by any performance value.
- * A list ordered by points is a leaderboard whatever it is labelled, and the
- * person at the bottom reads it as a verdict on themselves.
- *
- * Each row shows that person's own covered-day count and nothing comparative:
- * no rank, no minutes, no indication of who holds the catch-up bonus, and no way
- * to tell a covered day from a practised one.
+ * Design Revision — 2026-08-27 (see docs/PRODUCT-SPEC.md): this screen used to
+ * list the four people alphabetically with only their own covered-day count.
+ * It now ranks them by current contest score, and shows each person's streak,
+ * minutes and catch-up status — an explicitly-approved product pivot toward
+ * real competitive mechanics. Rows carry a stable `layoutId` so a change in
+ * standings visibly reorders them rather than popping to a new position.
  */
-export function Group({ onBack, now = new Date() }: { onBack: () => void; now?: Date }) {
+export function Group({ now = new Date() }: { now?: Date }) {
   const d = useDerived(now);
+
+  // Hooks run unconditionally, before the `!d` early return below — see
+  // Finale.tsx for the same pattern with its one-shot celebration ref.
+  const myRank = d?.leaderboard.find((row) => row.personId === d.me)?.rank;
+  const previousRank = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (myRank !== undefined && previousRank.current !== undefined && myRank < previousRank.current) {
+      playRankUp();
+    }
+    previousRank.current = myRank;
+  }, [myRank]);
+
   if (!d) return null;
 
-  const people = d.members.map((m, i) => ({
-    id: m.personId,
-    name: m.displayName,
-    skill: m.declaration.skill,
-    days: coveredDays(d.runState, m.personId).size,
-    hue: `var(--p${(i % 4) + 1})`,
-  }));
+  const rows = d.leaderboard.map((row) => {
+    const member = d.members.find((m) => m.personId === row.personId);
+    const i = d.members.findIndex((m) => m.personId === row.personId);
+    return {
+      ...row,
+      name: member?.displayName ?? row.personId,
+      hue: `var(--p${(i % 4) + 1})`,
+    };
+  });
 
   return (
-    <Screen testId="group">
+    <Screen testId="group" accent="var(--p3)" scroll="fixed">
       <GroupNumber total={d.total} target={GROUP_TARGET} />
       <p data-testid="group-headline">{d.headline}</p>
 
       <Card testId="people">
-        {people.map((p) => (
-          <div className="row" key={p.id} style={{ justifyContent: 'space-between' }}>
-            <span style={{ color: p.hue, fontWeight: 600 }}>{p.name}</span>
-            <span className="muted">{p.skill}</span>
-            <span style={{ fontVariantNumeric: 'tabular-nums' }}>{p.days}</span>
-          </div>
+        {rows.map((row) => (
+          <motion.div
+            className="leaderboard-row"
+            key={row.personId}
+            layout
+            layoutId={row.personId}
+            transition={reorderTransition}
+          >
+            <RankBadge rank={row.rank} />
+            <Buddy state={row.rank === 1 ? 'happy' : 'idle'} hue={row.hue} size={32} />
+            <span className="leaderboard-row__name" style={{ color: row.hue }}>
+              {row.name}
+            </span>
+            <div className="leaderboard-row__stats">
+              {row.hasCatchupBonus ? <CatchupBadge label={copy.group.catchupBadge} /> : null}
+              <StreakBadge streak={row.currentStreak} />
+              <span className="muted">{copy.group.minutes(row.totalMinutes)}</span>
+              <span className="leaderboard-row__points">{row.points}</span>
+            </div>
+          </motion.div>
         ))}
       </Card>
 
@@ -47,10 +85,6 @@ export function Group({ onBack, now = new Date() }: { onBack: () => void; now?: 
           {copy.group.waiting(d.members.length)}
         </p>
       ) : null}
-
-      <Button variant="quiet" onClick={onBack} testId="back">
-        {copy.nav.back}
-      </Button>
     </Screen>
   );
 }

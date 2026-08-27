@@ -1,10 +1,16 @@
+import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { copy } from '../domain/copy';
 import { scoreBreakdown, scoreDay } from '../domain/scoring';
 import type { DayLog } from '../domain/types';
 import { useDerived } from '../store/derived';
 import { useRun } from '../store/run';
+import { Buddy } from '../ui/Buddy';
 import { Button, Card, Screen, Toggle } from '../ui/components';
+import { celebrateBurst } from '../ui/confetti';
+import { celebrateTap } from '../ui/haptics';
+import { badgePop, celebrateVariants } from '../ui/motion';
+import { playCelebrate, playTick } from '../ui/sound';
 
 /**
  * The log screen.
@@ -16,6 +22,10 @@ import { Button, Card, Screen, Toggle } from '../ui/components';
  *    reflections are scored at all.
  *  - The cue question is self-declared and never contested.
  *  - "Not today" is a plain button with no consequence copy attached to it.
+ *
+ * Design Revision 2026-08-27 (see docs/PRODUCT-SPEC.md): a successful submit
+ * now fires a confetti burst and a haptic tap — an explicitly-approved reversal
+ * of the original "no celebration on a daily log" rule.
  */
 export function Log({
   onDone,
@@ -53,7 +63,10 @@ export function Log({
   const points = scoreDay(draft, d.hasCatchup);
 
   return (
-    <Screen testId="log">
+    <Screen testId="log" accent="var(--p2)">
+      <div className="row" style={{ justifyContent: 'center' }}>
+        <Buddy state={saving ? 'celebrate' : 'idle'} size={72} testId="buddy" />
+      </div>
       <h1>{copy.log.practisedQuestion}</h1>
 
       {d.hasCatchup ? <p data-testid="catchup-note">{copy.log.catchupActive}</p> : null}
@@ -62,13 +75,19 @@ export function Log({
         <Toggle
           label={copy.log.practisedQuestion}
           checked={practised}
-          onChange={setPractised}
+          onChange={(v) => {
+            setPractised(v);
+            playTick();
+          }}
           testId="toggle-practised"
         />
         <Toggle
           label={copy.log.cueQuestion}
           checked={atCue}
-          onChange={setAtCue}
+          onChange={(v) => {
+            setAtCue(v);
+            playTick();
+          }}
           testId="toggle-cue"
         />
       </Card>
@@ -96,10 +115,17 @@ export function Log({
 
       <Card testId="breakdown">
         {scoreBreakdown(draft, d.hasCatchup).map((row) => (
-          <div className="row" key={row.action} style={{ justifyContent: 'space-between' }}>
+          <motion.div
+            className="row"
+            key={row.action}
+            style={{ justifyContent: 'space-between' }}
+            variants={badgePop}
+            initial="initial"
+            animate="enter"
+          >
             <span>{copy.actions[row.action]}</span>
             <span>{row.points}</span>
-          </div>
+          </motion.div>
         ))}
         <div className="row" style={{ justifyContent: 'space-between', fontWeight: 700 }}>
           <span>{copy.log.todayTotal}</span>
@@ -107,11 +133,26 @@ export function Log({
         </div>
       </Card>
 
+      {saving ? (
+        <motion.p
+          className="muted"
+          data-testid="celebrate"
+          variants={celebrateVariants}
+          initial="initial"
+          animate="enter"
+        >
+          {copy.log.logged(d.day)}
+        </motion.p>
+      ) : null}
+
       <Button
         testId="save-log"
         disabled={saving}
         onClick={() => {
           setSaving(true);
+          celebrateBurst();
+          celebrateTap();
+          playCelebrate();
           void saveLog(d.day, draft).then(onDone);
         }}
       >

@@ -3,6 +3,7 @@ import { appDayDate } from '../domain/appDay';
 import { copy } from '../domain/copy';
 import type { Declaration } from '../domain/types';
 import { useRun } from '../store/run';
+import { Buddy } from '../ui/Buddy';
 import { Button, Card, Screen } from '../ui/components';
 
 /**
@@ -28,14 +29,13 @@ function randomCode(): string {
   return out;
 }
 
-type Mode = 'choose' | 'create' | 'join';
+type Mode = 'intro' | 'choose' | 'create' | 'join';
 
 export function Onboard({ onDone }: { onDone: () => void }) {
   const createGroup = useRun((s) => s.createGroup);
   const joinGroup = useRun((s) => s.joinGroup);
-  const configureSync = useRun((s) => s.configureSync);
 
-  const [mode, setMode] = useState<Mode>('choose');
+  const [mode, setMode] = useState<Mode>('intro');
   const [code, setCode] = useState('');
   const [startDate, setStartDate] = useState('');
 
@@ -46,18 +46,17 @@ export function Onboard({ onDone }: { onDone: () => void }) {
   const [feedback, setFeedback] = useState('');
   const [reminder, setReminder] = useState('20:00');
 
-  const [syncUrl, setSyncUrl] = useState('');
-  const [syncKey, setSyncKey] = useState('');
-
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const today = appDayDate(new Date(), zone);
 
-  const ready =
-    name.trim().length > 0 &&
-    skill.trim().length > 1 &&
-    cue.trim().length > 5 &&
-    feedback.trim().length > 3 &&
-    (mode === 'create' || code.trim().length >= 4);
+  const missing: string[] = [];
+  if (name.trim().length === 0) missing.push(copy.setup.missingLabels.name);
+  if (skill.trim().length <= 1) missing.push(copy.setup.missingLabels.skill);
+  if (cue.trim().length <= 5) missing.push(copy.setup.missingLabels.cue);
+  if (feedback.trim().length <= 3) missing.push(copy.setup.missingLabels.feedback);
+  if (mode === 'join' && code.trim().length < 4) missing.push(copy.setup.missingLabels.code);
+
+  const ready = missing.length === 0;
 
   async function submit() {
     const personId = `${name.trim().toLowerCase().replace(/[^a-z0-9]/g, '')}-${Math.random()
@@ -74,16 +73,33 @@ export function Onboard({ onDone }: { onDone: () => void }) {
       reminderTime: reminder,
     };
 
-    if (syncUrl.trim() && syncKey.trim()) {
-      await configureSync({ url: syncUrl.trim(), anonKey: syncKey.trim() });
-    }
-
     if (mode === 'create') {
       await createGroup(code || randomCode(), today, name.trim(), declaration);
     } else {
       await joinGroup(code.trim().toUpperCase(), startDate || today, name.trim(), declaration);
     }
     onDone();
+  }
+
+  if (mode === 'intro') {
+    return (
+      <Screen testId="onboard-intro">
+        <div className="row" style={{ justifyContent: 'center' }}>
+          <Buddy state="happy" size={110} testId="buddy" />
+        </div>
+        <h1 style={{ textAlign: 'center' }}>{copy.appName}</h1>
+        <p style={{ textAlign: 'center' }}>{copy.tagline}</p>
+        <Card testId="intro-steps">
+          <h2>{copy.onboard.introHeading}</h2>
+          {copy.onboard.introSteps.map((step, i) => (
+            <p key={i}>{step}</p>
+          ))}
+        </Card>
+        <Button testId="intro-continue" onClick={() => setMode('choose')}>
+          {copy.onboard.introContinue}
+        </Button>
+      </Screen>
+    );
   }
 
   if (mode === 'choose') {
@@ -211,42 +227,31 @@ export function Onboard({ onDone }: { onDone: () => void }) {
         </label>
       </Card>
 
-      <Card testId="sync-card">
-        <h2>{copy.sync.heading}</h2>
-        <p>{copy.sync.explain}</p>
-        <label>
-          {copy.sync.url}
-          <input
-            type="text"
-            value={syncUrl}
-            onChange={(e) => setSyncUrl(e.target.value)}
-            data-testid="input-sync-url"
-          />
-        </label>
-        <label>
-          {copy.sync.key}
-          <input
-            type="text"
-            value={syncKey}
-            onChange={(e) => setSyncKey(e.target.value)}
-            data-testid="input-sync-key"
-          />
-        </label>
-        <span className="muted">{copy.sync.optional}</span>
-      </Card>
-
       <Card testId="rules">
         <h2>{copy.rules.heading}</h2>
-        <p>{copy.rules.groupGoal}</p>
-        <p>{copy.rules.bands}</p>
-        <p>{copy.rules.ceiling}</p>
-        <p>{copy.rules.midpoint}</p>
-        <p>{copy.rules.catchup}</p>
-        <p>{copy.rules.coverDay}</p>
-        <p>{copy.rules.notifications}</p>
-        <p>{copy.setup.honourSystem}</p>
+        {[
+          ['🎯', copy.rules.groupGoal],
+          ['🏅', copy.rules.bands],
+          ['⚖️', copy.rules.ceiling],
+          ['🔄', copy.rules.midpoint],
+          ['🤝', copy.rules.catchup],
+          ['🎫', copy.rules.coverDay],
+          ['🔔', copy.rules.notifications],
+          ['🫶', copy.setup.honourSystem],
+        ].map(([icon, text]) => (
+          <div className="rule-row" key={text}>
+            <span className="rule-row__icon" aria-hidden="true">{icon}</span>
+            <p>{text}</p>
+          </div>
+        ))}
         <p className="muted">{copy.setup.spacingRationale}</p>
       </Card>
+
+      {missing.length > 0 ? (
+        <p className="muted" data-testid="missing-fields">
+          {copy.setup.missing(missing)}
+        </p>
+      ) : null}
 
       <Button
         testId="begin"

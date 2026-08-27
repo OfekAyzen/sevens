@@ -1,14 +1,16 @@
 import { copy } from '../domain/copy';
 import { GROUP_TARGET } from '../domain/types';
 import { useDerived } from '../store/derived';
+import { Buddy } from '../ui/Buddy';
 import { Button, Card, DayStrip, GroupNumber, Screen, Stat } from '../ui/components';
 
 /**
  * Home.
  *
- * Hierarchy is the design: the group number is the hero, personal counters are
- * secondary, and there is no ranking on this screen at all. Both personal figures
- * shown only ever increase.
+ * Hierarchy is the design: the group number stays the hero, personal counters
+ * are secondary. Design Revision 2026-08-27 (see docs/PRODUCT-SPEC.md) added a
+ * current streak and a rank summary here — an explicitly-approved reversal of
+ * the original "no ranking on this screen" rule.
  *
  * Day 3 additionally surfaces their own Day 1 reflection and the offer to lower
  * their minimum, because Day 3 is the documented dip — novelty gone, no visible
@@ -16,15 +18,13 @@ import { Button, Card, DayStrip, GroupNumber, Screen, Stat } from '../ui/compone
  */
 export function Home({
   onLog,
-  onGroup,
-  onFeed,
   onSettings,
   now = new Date(),
 }: {
   onLog: () => void;
-  onGroup: () => void;
-  onFeed: () => void;
-  onSettings: () => void;
+  /** Only used for the Day-3 "lower your minimum" deep link — Feed/Group/
+   * Settings are reached via the tab bar now, not buttons on Home. */
+  onSettings?: () => void;
   now?: Date;
 }) {
   const d = useDerived(now);
@@ -33,11 +33,17 @@ export function Home({
   const dayCopy = copy.days[d.day];
   const loggedToday = d.covered.has(d.day);
   const dayOneReflection = d.myDoc.logs.find((l) => l.day === 1)?.reflection ?? null;
+  const myRank = d.leaderboard.find((row) => row.personId === d.me)?.rank ?? d.leaderboard.length;
+  const myHue = `var(--p${(d.members.findIndex((m) => m.personId === d.me) % 4) + 1})`;
 
   return (
-    <Screen testId="home">
+    <Screen testId="home" scroll="fixed">
       <GroupNumber total={d.total} target={GROUP_TARGET} />
       <p data-testid="group-headline">{d.headline}</p>
+
+      <div className="row" style={{ justifyContent: 'center' }}>
+        <Buddy state={loggedToday ? 'happy' : 'waiting'} hue={myHue} testId="buddy" />
+      </div>
 
       <DayStrip today={d.day} covered={d.covered} />
 
@@ -66,8 +72,11 @@ export function Home({
         <div className="row" style={{ gap: 'var(--s-6)' }}>
           <Stat label="Days practised" value={`${d.counters.daysPractised} of 7`} />
           <Stat label="Best run" value={d.counters.bestRun} />
+          <Stat label={copy.counters.currentStreak} value={d.counters.currentStreak} />
         </div>
-        <span className="muted">{copy.counters.nothingAtStake}</span>
+        <span className="muted" data-testid="rank-summary">
+          {copy.counters.rankSummary(myRank)}
+        </span>
       </Card>
 
       {loggedToday ? (
@@ -75,20 +84,10 @@ export function Home({
           {copy.log.logged(d.day)}
         </p>
       ) : (
-        <Button onClick={onLog} testId="go-log">
+        <Button onClick={onLog} testId="go-log" pulse>
           {copy.log.practisedQuestion}
         </Button>
       )}
-
-      <Button variant="quiet" onClick={onFeed} testId="go-feed">
-        {copy.feed.heading}
-      </Button>
-      <Button variant="quiet" onClick={onGroup} testId="go-group">
-        {copy.group.heading}
-      </Button>
-      <Button variant="plain" onClick={onSettings} testId="go-settings">
-        {copy.settings.heading}
-      </Button>
     </Screen>
   );
 }

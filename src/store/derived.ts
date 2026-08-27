@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
-import { assemble, allPosts, nameMap, withResolvedSupport } from '../domain/assemble';
+import { allComments, allPosts, assemble, nameMap, withResolvedSupport } from '../domain/assemble';
 import { currentDay } from '../domain/appDay';
 import { catchupHolders } from '../domain/catchup';
 import { coveredDays, personCounters } from '../domain/counters';
 import { groupHeadline, groupTotal } from '../domain/group';
-import type { MemberDoc, PersonId, Post, RunDay, RunState } from '../domain/types';
+import { rankMembers, type RankedMember } from '../domain/leaderboard';
+import type { Comment, MemberDoc, PersonId, Post, RunDay, RunState } from '../domain/types';
 import { useRun } from './run';
 
 /**
@@ -28,7 +29,12 @@ export interface Derived {
   total: number;
   headline: string;
   hasCatchup: boolean;
+  /** The four people ranked by their current contest score. Design Revision
+   * 2026-08-27 — see docs/PRODUCT-SPEC.md. */
+  leaderboard: RankedMember[];
   posts: Post[];
+  /** Every comment across the group, oldest first. Purely social — never scored. */
+  comments: Comment[];
   myDoc: MemberDoc;
   /** True once the run is over — day 8 and beyond. */
   finished: boolean;
@@ -68,7 +74,9 @@ export function useDerived(now: Date = new Date()): Derived | null {
       total: groupTotal(runState),
       headline: groupHeadline(runState, effectiveDay),
       hasCatchup: catchupHolders(runState, effectiveDay, effectiveDay).has(me),
+      leaderboard: rankMembers(runState, effectiveDay),
       posts: allPosts(resolved),
+      comments: allComments(resolved),
       myDoc,
       finished: day === null && time > Date.parse(`${group.startDate}T00:00:00Z`),
     };
