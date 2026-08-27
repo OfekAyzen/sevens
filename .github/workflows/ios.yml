@@ -1,0 +1,93 @@
+name: ios
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Same gate as android.yml — a red build can never produce an installable artifact.
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test:cov
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+
+  ipa:
+    needs: verify
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build web bundle and sync to iOS
+        run: npm run build && npx cap sync ios
+
+      # Unsigned build: nobody in this group has a paid Apple Developer account.
+      # Sideloading tools (AltStore/Sideloadly) re-sign the app locally with a
+      # free Apple ID when they install it, so CI doesn't need to sign at all —
+      # it just needs a real device (arm64) build, not a simulator one.
+      - name: Build unsigned .app for a real device
+        working-directory: ios/App
+        run: |
+          xcodebuild -workspace App.xcodeproj/project.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath DerivedData \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=NO \
+            build
+
+      - name: Package as an .ipa
+        working-directory: ios/App
+        run: |
+          APP_PATH="DerivedData/Build/Products/Release-iphoneos/App.app"
+          mkdir -p Payload
+          cp -r "$APP_PATH" Payload/
+          zip -qr sevens-unsigned.ipa Payload
+
+      - name: Name the artifact after the build
+        id: name
+        run: |
+          SHORT="$(git rev-parse --short HEAD)"
+          VERSION="${GITHUB_REF_NAME//\//-}"
+          echo "ipa=sevens-${VERSION}-${SHORT}.ipa" >> "$GITHUB_OUTPUT"
+          cp ios/App/sevens-unsigned.ipa "sevens-${VERSION}-${SHORT}.ipa"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.name.outputs.ipa }}
+          path: ${{ steps.name.outputs.ipa }}
+          retention-days: 30
+
+      # A tag additionally publishes a release, so the install link is a plain
+      # URL — same pattern as android.yml.
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.name.outputs.ipa }}
+          generate_release_notes: true

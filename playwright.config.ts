@@ -20,7 +20,13 @@ export default defineConfig({
     },
   },
   webServer: {
-    command: 'npm run build && npm run preview -- --port 4173 --strictPort',
+    // Pin to the IPv4 loopback explicitly: on hosts where `localhost` resolves
+    // to `::1` only, a bare `vite preview` binds IPv6-only and this baseURL
+    // (127.0.0.1) can never reach it.
+    // build:e2e (not build) so a locally configured `.env` never leaks real
+    // Supabase credentials into the browser suite — see tools/empty-env.
+    command:
+      'npm run build:e2e && npm run preview -- --port 4173 --strictPort --host 127.0.0.1',
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
