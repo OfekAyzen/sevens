@@ -1,0 +1,31 @@
+node_modules
+dist
+dist-ssr
+*.local
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Test output
+coverage
+test-results
+playwright-report
+blob-report
+
+# Native build output. The android/ project itself IS committed so CI can build
+# it without running `cap add` (which would drift from what you build locally).
+android/app/build
+android/build
+android/.gradle
+android/local.properties
+android/app/src/main/assets/public
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/res/xml/config.xml
+*.keystore
+!android/app/debug.keystore
+*.apk
+*.aab
+
+.idea
+*.iml

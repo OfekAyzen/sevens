@@ -1,0 +1,127 @@
+.screen {
+  min-height: 100%;
+  padding: calc(var(--safe-top) + var(--s-5)) var(--s-4)
+           calc(var(--safe-bottom) + var(--s-7));
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.btn {
+  border: 0;
+  border-radius: var(--r-full);
+  padding: var(--s-4) var(--s-5);
+  font-size: var(--t-md);
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 52px;
+}
+.btn--primary { background: var(--accent); color: #fff; }
+.btn--quiet { background: var(--bg-raised); color: var(--text); border: 1px solid var(--line); }
+/* The exit is a plain button with no consequence text and no visual penalty. */
+.btn--plain { background: none; color: var(--text-dim); min-height: 44px; }
+.btn:disabled { opacity: 0.4; }
+
+.hero { text-align: center; padding: var(--s-5) 0 var(--s-3); }
+.hero__value {
+  font-size: var(--t-hero);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.hero__of { color: var(--text-dim); font-size: var(--t-lg); margin-top: var(--s-1); }
+
+.meter {
+  height: 8px;
+  background: var(--bg-sunken);
+  border-radius: var(--r-full);
+  overflow: hidden;
+  margin-top: var(--s-4);
+}
+.meter__fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+  border-radius: var(--r-full);
+}
+
+.strip { display: flex; gap: var(--s-2); list-style: none; padding: 0; margin: 0; }
+.strip li { flex: 1; }
+.cell {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--bg-raised);
+  color: var(--text-faint);
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+.cell--done { background: var(--accent); border-color: var(--accent); color: #fff; }
+.cell--today { border-color: var(--accent); color: var(--text); }
+/* A past day with nothing logged. Deliberately identical to a future day: an
+   absence is not a failure and is never marked as one. */
+.cell--open { background: var(--bg-raised); }
+.cell--future { opacity: 0.5; }
+
+.card {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.stat { display: flex; flex-direction: column; gap: 2px; }
+.stat__value { font-size: var(--t-xl); font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat__label { font-size: var(--t-xs); color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+
+.toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-4);
+  width: 100%; background: none; border: 0; padding: var(--s-3) 0; cursor: pointer; text-align: left;
+}
+.toggle__label { font-size: var(--t-md); }
+.toggle__track {
+  width: 52px; height: 32px; border-radius: var(--r-full);
+  background: var(--bg-sunken); border: 1px solid var(--line-strong);
+  display: flex; align-items: center; padding: 3px; flex: 0 0 auto;
+}
+.toggle__track.is-on { background: var(--accent); border-color: var(--accent); justify-content: flex-end; }
+.toggle__knob { width: 24px; height: 24px; border-radius: var(--r-full); background: #fff; display: block; }
+
+h1 { font-size: var(--t-xl); margin: 0; letter-spacing: -0.02em; }
+h2 { font-size: var(--t-lg); margin: 0; }
+p { margin: 0; color: var(--text-dim); line-height: 1.5; }
+label { display: flex; flex-direction: column; gap: var(--s-2); font-size: var(--t-sm); color: var(--text-dim); }
+input[type='text'], input[type='number'], input[type='time'], textarea {
+  background: var(--bg-sunken); border: 1px solid var(--line-strong); color: var(--text);
+  border-radius: var(--r-md); padding: var(--s-3); font: inherit; width: 100%;
+}
+textarea { min-height: 96px; resize: vertical; }
+.row { display: flex; gap: var(--s-3); align-items: center; }
+.muted { color: var(--text-faint); font-size: var(--t-sm); }
+
+/* Feed ------------------------------------------------------------------ */
+.posts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-3); }
+.post {
+  background: var(--bg-raised); border: 1px solid var(--line);
+  border-radius: var(--r-lg); padding: var(--s-4);
+  display: flex; flex-direction: column; gap: var(--s-2);
+}
+.post__head { display: flex; justify-content: space-between; align-items: baseline; }
+.post__who { font-weight: 600; }
+.post__image { width: 100%; border-radius: var(--r-md); display: block; }
+.react {
+  align-self: flex-start; background: var(--bg-sunken); border: 1px solid var(--line-strong);
+  color: var(--text-dim); border-radius: var(--r-full);
+  padding: var(--s-2) var(--s-4); min-height: 40px; cursor: pointer;
+}
+.react.is-on { background: var(--accent-wash); border-color: var(--accent); color: var(--text); }
+
+/* Day 7 before/after ---------------------------------------------------- */
+.beforeafter { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); }
+.beforeafter__side { display: flex; flex-direction: column; gap: var(--s-2); min-width: 0; }

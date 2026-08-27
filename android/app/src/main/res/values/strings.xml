@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Sevens</string>
+    <string name="title_activity_main">Sevens</string>
+    <string name="package_name">com.sevens.app</string>
+    <string name="custom_url_scheme">com.sevens.app</string>
+</resources>

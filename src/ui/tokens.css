@@ -1,0 +1,82 @@
+/*
+ * Design tokens.
+ *
+ * The palette is deliberately calm. This app is used once a day for ninety
+ * seconds, in the evening, by someone who may have had a bad day — so it reads as
+ * a quiet notebook rather than a game. There is no red anywhere in the system:
+ * nothing in this product is an error or a warning.
+ */
+:root {
+  color-scheme: dark;
+
+  --bg: #0b0d12;
+  --bg-raised: #14171f;
+  --bg-sunken: #080a0e;
+  --line: #232734;
+  --line-strong: #313747;
+
+  --text: #eef0f6;
+  --text-dim: #9aa1b4;
+  --text-faint: #626a7e;
+
+  --accent: #7c5cff;
+  --accent-dim: #5b43c4;
+  --accent-wash: #7c5cff1f;
+
+  /* Each person gets a fixed hue, assigned at setup and never reused as a
+     ranking signal. */
+  --p1: #7c5cff;
+  --p2: #3fb8af;
+  --p3: #e0a33e;
+  --p4: #d76a9c;
+
+  --r-sm: 8px;
+  --r-md: 14px;
+  --r-lg: 22px;
+  --r-full: 999px;
+
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Type scale. The group number is the largest thing in the app by design. */
+  --t-hero: 4.5rem;
+  --t-xl: 2rem;
+  --t-lg: 1.375rem;
+  --t-md: 1rem;
+  --t-sm: 0.875rem;
+  --t-xs: 0.75rem;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--t-md);
+  -webkit-font-smoothing: antialiased;
+  /* No pull-to-refresh, no rubber-banding: the feed is finite and ends. */
+  overscroll-behavior: none;
+}
+
+button { font: inherit; color: inherit; }
+
+/* Anyone who asks for less motion gets none of it. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
