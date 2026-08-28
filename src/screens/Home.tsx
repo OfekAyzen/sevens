@@ -5,7 +5,7 @@ import { GROUP_TARGET, RUN_LENGTH_DAYS, type RunDay } from '../domain/types';
 import { useDerived } from '../store/derived';
 import { useRun } from '../store/run';
 import { Buddy } from '../ui/Buddy';
-import { Button, Card, DayStrip, GroupNumber, Screen, Stat } from '../ui/components';
+import { Button, Card, DayStrip, GroupNumber, Screen } from '../ui/components';
 import {
   BellIcon,
   HandsIcon,
@@ -61,7 +61,6 @@ export function Home({
   const loggedToday = d.covered.has(d.day);
   const todayLog = d.myDoc.logs.find((l) => l.day === d.day);
   const dayOneReflection = d.myDoc.logs.find((l) => l.day === 1)?.reflection ?? null;
-  const myRank = d.leaderboard.find((row) => row.personId === d.me)?.rank ?? d.leaderboard.length;
   const myHue = `var(--p${(d.members.findIndex((m) => m.personId === d.me) % 4) + 1})`;
 
   function closeRules() {
@@ -118,17 +117,6 @@ export function Home({
         </Card>
       ) : null}
 
-
-      <Card testId="my-counters">
-        <div className="row" style={{ gap: 'var(--s-6)' }}>
-          <Stat label="Days practised" value={`${d.counters.daysPractised} of 7`} />
-          <Stat label="Best run" value={d.counters.bestRun} />
-          <Stat label={copy.counters.currentStreak} value={d.counters.currentStreak} />
-        </div>
-        <span className="muted" data-testid="rank-summary">
-          {copy.counters.rankSummary(myRank)}
-        </span>
-      </Card>
 
       {loggedToday ? (
         <>

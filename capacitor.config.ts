@@ -19,6 +19,13 @@ const config: CapacitorConfig = {
       smallIcon: 'ic_stat_icon',
       iconColor: '#7C5CFF',
     },
+    // Android 15+ ignores backgroundColor and treats the status bar as
+    // transparent regardless of this setting (see MainActivity.java) — style
+    // is what actually matters now: light icons/text for our dark app.
+    StatusBar: {
+      style: 'DARK',
+      overlaysWebView: true,
+    },
   },
 };
 

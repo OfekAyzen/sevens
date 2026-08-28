@@ -16,7 +16,23 @@
     </style>
 
 
+    <!-- android:background/@drawable/splash below is a pre-Android-12 fallback
+         that androidx.core.splashscreen mostly ignores on modern devices.
+         Left auto-deriving the splash icon from the app's adaptive launcher
+         icon (@mipmap/ic_launcher) double-exposes it — two overlapping,
+         differently-scaled copies of Buddy, confirmed static (not an
+         animation-timing artifact: still there with every OS animation
+         scale forced to 0) and confirmed splash-only (the same icon renders
+         as one clean face everywhere else — app drawer, system settings,
+         Recents). Pointing windowSplashScreenAnimatedIcon at the foreground
+         layer directly sidesteps whatever adaptive-icon compositing path in
+         the splash constructor was producing the double image. -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>
+        <item name="windowSplashScreenBackground">@color/splashBackground</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/splashBackground</item>
+        <item name="windowSplashScreenAnimationDuration">1</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
 </resources>

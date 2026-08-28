@@ -3,7 +3,7 @@ import { copy } from '../domain/copy';
 import { RUN_LENGTH_DAYS, type RunDay } from '../domain/types';
 import { useDerived } from '../store/derived';
 import { useRun } from '../store/run';
-import { Button, Card, Screen } from '../ui/components';
+import { Button, Card, Screen, Stat } from '../ui/components';
 
 /**
  * Settings.
@@ -38,10 +38,22 @@ export function Settings({ now = new Date() }: { now?: Date }) {
   for (let day = 1; day <= RUN_LENGTH_DAYS; day++) {
     if (!d.covered.has(day as RunDay) && day <= d.day) missedDays.push(day as RunDay);
   }
+  const myRank = d.leaderboard.find((row) => row.personId === d.me)?.rank ?? d.leaderboard.length;
 
   return (
-    <Screen testId="settings" scroll="fixed">
+    <Screen testId="settings" scroll="scroll">
       <h1>{copy.settings.heading}</h1>
+
+      <Card testId="my-counters">
+        <div className="row" style={{ gap: 'var(--s-6)' }}>
+          <Stat label="Days practised" value={`${d.counters.daysPractised} of 7`} />
+          <Stat label="Best run" value={d.counters.bestRun} />
+          <Stat label={copy.counters.currentStreak} value={d.counters.currentStreak} />
+        </div>
+        <span className="muted" data-testid="rank-summary">
+          {copy.counters.rankSummary(myRank)}
+        </span>
+      </Card>
 
       <Card testId="sync-status">
         <h2>{copy.sync.heading}</h2>

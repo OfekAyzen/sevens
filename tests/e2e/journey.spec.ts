@@ -245,8 +245,12 @@ test('logging a day fills a cell and moves the counters up only', async ({ page 
 
   await expect(page.getByTestId('home')).toBeVisible();
   await expect(page.getByTestId('already-logged')).toBeVisible();
-  await expect(page.getByTestId('my-counters')).toContainText('1 of 7');
   await expect(page.getByTestId('group-number')).toContainText('1');
+
+  // The counters card lives on the User settings tab, not Home — see
+  // Settings.tsx.
+  await page.getByTestId('tab-settings').click();
+  await expect(page.getByTestId('my-counters')).toContainText('1 of 7');
 });
 
 test('logging a second session tracks it without changing the score', async ({ page }) => {
@@ -451,5 +455,7 @@ test('the state survives a reload', async ({ page }) => {
   await page.reload();
   await expect(page.getByTestId('home')).toBeVisible();
   await expect(page.getByTestId('already-logged')).toBeVisible();
+
+  await page.getByTestId('tab-settings').click();
   await expect(page.getByTestId('my-counters')).toContainText('1 of 7');
 });

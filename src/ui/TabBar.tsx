@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import type { CSSProperties, ComponentType } from 'react';
 import { copy } from '../domain/copy';
-import { CameraIcon, GearIcon, HomeIcon, TrophyIcon } from './icons';
+import { CameraIcon, HomeIcon, TrophyIcon, UserIcon } from './icons';
 import { springSnap } from './motion';
 
 export type Tab = 'home' | 'feed' | 'group' | 'settings';
@@ -10,7 +10,7 @@ const TABS: { id: Tab; Icon: ComponentType<{ size?: number }>; label: () => stri
   { id: 'home', Icon: HomeIcon, label: () => copy.nav.tabHome, accent: 'var(--p1)' },
   { id: 'feed', Icon: CameraIcon, label: () => copy.nav.tabPosts, accent: 'var(--p4)' },
   { id: 'group', Icon: TrophyIcon, label: () => copy.nav.tabBoard, accent: 'var(--p3)' },
-  { id: 'settings', Icon: GearIcon, label: () => copy.nav.tabSettings, accent: 'var(--p2)' },
+  { id: 'settings', Icon: UserIcon, label: () => copy.nav.tabSettings, accent: 'var(--p2)' },
 ];
 
 /**

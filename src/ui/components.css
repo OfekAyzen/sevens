@@ -52,9 +52,20 @@
   overflow: hidden;
 }
 /* The four tabbed screens: exactly the height the app shell gives them, no
-   page-level scroll. Feed opts its own `.posts` list back into scrolling
-   (below) — everything else is sized to fit. */
+   page-level scroll — Settings is the one exception (see Screen's `scroll`
+   prop doc). Feed opts its own `.posts` list back into scrolling (below) —
+   everything else is sized to fit, so overflow is hidden rather than auto:
+   content here must actually fit, not merely be reachable by scrolling past
+   it. */
 .screen--fixed {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: calc(var(--safe-bottom) + var(--s-5));
+}
+/* Settings: same fixed slot in the tab shell, but scrolls internally instead
+   of clipping — its content (missed-day buttons, etc.) genuinely varies. */
+.screen--scroll {
   height: 100%;
   min-height: 0;
   overflow-y: auto;

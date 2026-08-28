@@ -17,14 +17,21 @@ import './components.css';
  * Design Revision 2026-08-27, round 3: every screen used to default to
  * `--accent`, which read as one hue everywhere. Omit it to keep that default.
  *
- * `scroll` — Design Revision, round 4: `'fixed'` (used by the four tabbed
- * screens — Home/Feed/Group/Settings) sizes the screen to exactly the space
- * the tab shell gives it and hides overflow, so the only thing that scrolls
- * in the main app is the posts list inside Feed (which manages its own
- * internal scroll region). `'page'` (the default) keeps the original
- * document-scrolls-if-needed behavior, for the screens outside the tab shell
- * (Onboard's setup wizard, the Log action screen, the Day-7/8 Finale) where
- * content genuinely varies in length and a scroll is normal, not a smell.
+ * `scroll` — three modes, all rendered inside the fixed-height `.app-shell`
+ * (`.app-shell__content` clips overflow, so document-level scroll never
+ * reaches a tabbed screen — that only works for the screens below that live
+ * outside the shell entirely):
+ *  - `'fixed'` (Home, Feed, Group): sized to exactly the space the tab shell
+ *    gives it, overflow hidden. Content here must actually fit — Feed's own
+ *    post list opts back into scrolling via its own internal region, the
+ *    same mechanism `'scroll'` below generalizes.
+ *  - `'scroll'` (Settings — the one tabbed screen whose content is openly
+ *    variable, e.g. a growing list of missed days): same fixed height, but
+ *    scrolls internally instead of clipping.
+ *  - `'page'` (default): the original document-scrolls-if-needed behavior,
+ *    for screens outside the tab shell (Onboard's setup wizard, the Log
+ *    action screen, the Day-7/8 Finale) where content genuinely varies in
+ *    length and a scroll is normal, not a smell.
  */
 export function Screen({
   children,
@@ -35,11 +42,12 @@ export function Screen({
   children: ReactNode;
   testId?: string;
   accent?: string;
-  scroll?: 'page' | 'fixed';
+  scroll?: 'page' | 'fixed' | 'scroll';
 }) {
+  const scrollClass = scroll === 'fixed' ? 'screen--fixed' : scroll === 'scroll' ? 'screen--scroll' : '';
   return (
     <motion.main
-      className={`screen ${scroll === 'fixed' ? 'screen--fixed' : ''}`}
+      className={`screen ${scrollClass}`}
       data-testid={testId}
       variants={screenVariants}
       initial="initial"

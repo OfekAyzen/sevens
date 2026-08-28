@@ -29,7 +29,7 @@ export const copy = {
     tabHome: 'Home',
     tabPosts: 'Posts',
     tabBoard: 'Board',
-    tabSettings: 'Settings',
+    tabSettings: 'User settings',
   },
 
   actions: {
@@ -109,7 +109,7 @@ export const copy = {
   },
 
   settings: {
-    heading: 'Settings',
+    heading: 'User settings',
     lowerMinimum: 'Change my minimum',
     lowerHelp: 'You can lower this any time. It cannot go back up.',
     reminderOn: 'My own reminder',
