@@ -7,6 +7,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+# The default GITHUB_TOKEN is read-only on this repo; the tag-triggered
+# "Publish release" step needs contents:write to create a GitHub Release.
+permissions:
+  contents: write
+
 concurrency:
   group: android-${{ github.ref }}
   cancel-in-progress: true
