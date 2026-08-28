@@ -1,15 +1,16 @@
 import { motion } from 'framer-motion';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ComponentType } from 'react';
 import { copy } from '../domain/copy';
+import { CameraIcon, GearIcon, HomeIcon, TrophyIcon } from './icons';
 import { springSnap } from './motion';
 
 export type Tab = 'home' | 'feed' | 'group' | 'settings';
 
-const TABS: { id: Tab; icon: string; label: () => string; accent: string }[] = [
-  { id: 'home', icon: '🏠', label: () => copy.nav.tabHome, accent: 'var(--p1)' },
-  { id: 'feed', icon: '📸', label: () => copy.nav.tabPosts, accent: 'var(--p4)' },
-  { id: 'group', icon: '🏆', label: () => copy.nav.tabBoard, accent: 'var(--p3)' },
-  { id: 'settings', icon: '⚙️', label: () => copy.nav.tabSettings, accent: 'var(--p2)' },
+const TABS: { id: Tab; Icon: ComponentType<{ size?: number }>; label: () => string; accent: string }[] = [
+  { id: 'home', Icon: HomeIcon, label: () => copy.nav.tabHome, accent: 'var(--p1)' },
+  { id: 'feed', Icon: CameraIcon, label: () => copy.nav.tabPosts, accent: 'var(--p4)' },
+  { id: 'group', Icon: TrophyIcon, label: () => copy.nav.tabBoard, accent: 'var(--p3)' },
+  { id: 'settings', Icon: GearIcon, label: () => copy.nav.tabSettings, accent: 'var(--p2)' },
 ];
 
 /**
@@ -32,7 +33,7 @@ export function TabBar({ active, onSelect }: { active: Tab; onSelect: (tab: Tab)
             transition={springSnap}
             style={isActive ? ({ '--tab-accent': tab.accent } as CSSProperties) : undefined}
           >
-            <span className="tabbar__icon" aria-hidden="true">{tab.icon}</span>
+            <span className="tabbar__icon"><tab.Icon size={20} /></span>
             <span className="tabbar__label">{tab.label()}</span>
           </motion.button>
         );

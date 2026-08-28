@@ -61,11 +61,14 @@ export const copy = {
     enterCode: 'Group code',
     startDate: 'Day 1 of the week',
     startDateHelp: 'Use the same Day 1 the person who started the group used.',
+    createStartDateHelp: 'Everyone who joins will match this Day 1.',
     namePrompt: 'What should the group call you?',
     back: 'Back',
     // A short explainer shown once, before Start/Join. The full rules screen
     // still discloses everything in detail later, before anyone commits.
     introHeading: 'How this works',
+    // Rule 9's weekly exclamation is already spent on Day 7 — this stays flat.
+    introGreeting: "Hi. I'll walk you through how this works.",
     introSteps: [
       'Four people, seven days, four different skills.',
       'Log what you did each day. Reflecting and posting earn points too.',
@@ -90,6 +93,7 @@ export const copy = {
     empty: 'Nothing posted yet.',
     dayLabel: (day: number) => `Day ${day}`,
     postPrompt: 'Post a scrap of proof',
+    composerClose: 'Close',
     caption: 'Say what it is',
     attach: 'Add a photo or clip frame',
     post: 'Post it',
@@ -172,6 +176,11 @@ export const copy = {
     yesterdayOpen: 'Yesterday is open if you practised and forgot to log it.',
     // Rule 10: a plain exit with no consequence text.
     notToday: 'Not today.',
+    // Tracking only — see docs/PRODUCT-SPEC.md's Design Revision. Never
+    // scored, so the wording stays as flat as `logged` above: a count, not a
+    // congratulation.
+    addSession: 'Log another session today',
+    sessionsCount: (n: number) => (n === 2 ? 'Logged twice today.' : `Logged ${n} times today.`),
   },
 
   counters: {
@@ -202,6 +211,12 @@ export const copy = {
     streak: (n: number) => `${n} day streak`,
     minutes: (n: number) => `${n} min`,
     catchupBadge: '+2 catch-up',
+    // The leaderboard row's tap-through detail. Holder-only rules for the
+    // cover token (see docs/PRODUCT-SPEC.md) mean nothing here may say
+    // whether anyone but the viewer has spent theirs.
+    close: 'Close',
+    detailPosts: (n: number) => `${n} posts shared`,
+    detailSupport: (n: number) => `${n} reactions given`,
   },
 
   days: {

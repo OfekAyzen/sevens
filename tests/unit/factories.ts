@@ -9,6 +9,7 @@ export function makeLog(over: Partial<DayLog> & { personId: PersonId; day: DayIn
     supportedPersonIds: [],
     minutes: null,
     loggedLate: false,
+    sessions: 0,
     ...over,
   };
 }

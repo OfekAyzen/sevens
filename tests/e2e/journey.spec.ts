@@ -90,6 +90,27 @@ test('creating a group produces a shareable code', async ({ page }) => {
   expect(code).toMatch(/^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/);
 });
 
+test('the group creator can set the experiment start date, not just today', async ({ page }) => {
+  const twoDaysAgo = new Date();
+  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+  const iso = twoDaysAgo.toISOString().slice(0, 10);
+
+  await page.goto('/');
+  await page.getByTestId('intro-continue').click();
+  await page.getByTestId('mode-create').click();
+  await page.getByTestId('input-start-create').fill(iso);
+  await page.getByTestId('input-name').fill('Ofek');
+  await page.getByTestId('input-skill').fill('fingerstyle guitar');
+  await page.getByTestId('input-minimum').fill('10');
+  await page.getByTestId('input-cue').fill('after I put my coffee down, at the kitchen table');
+  await page.getByTestId('input-feedback').fill('record myself and listen back');
+  await page.getByTestId('begin').click();
+
+  // Day 1 was two days ago, so today reads as Day 3 — proof the picked date,
+  // not "today", drove the app-day calculation.
+  await expect(page.getByTestId('day-banner')).toContainText('Day 3.');
+});
+
 test('a new person sees a short how-it-works screen before choosing create or join', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('onboard-intro')).toBeVisible();
@@ -146,6 +167,20 @@ test('logging a day fills a cell and moves the counters up only', async ({ page 
   await expect(page.getByTestId('already-logged')).toBeVisible();
   await expect(page.getByTestId('my-counters')).toContainText('1 of 7');
   await expect(page.getByTestId('group-number')).toContainText('1');
+});
+
+test('logging a second session tracks it without changing the score', async ({ page }) => {
+  await createGroup(page);
+  await page.getByTestId('go-log').click();
+  await page.getByTestId('input-reflection').fill('the F chord is still slow but cleaner');
+  await page.getByTestId('save-log').click();
+
+  await expect(page.getByTestId('sessions-count')).not.toBeVisible();
+  const groupBefore = await page.getByTestId('group-number').textContent();
+
+  await page.getByTestId('add-session').click();
+  await expect(page.getByTestId('sessions-count')).toHaveText('Logged twice today.');
+  await expect(page.getByTestId('group-number')).toHaveText(groupBefore ?? '');
 });
 
 test('minutes are optional and never change a score', async ({ page }) => {
@@ -214,6 +249,26 @@ test('the leaderboard shows rank, streak and points for a solo run', async ({ pa
   await expect(row.locator('.streak-badge')).toBeVisible();
 });
 
+test('tapping a leaderboard row opens that person\'s activity detail', async ({ page }) => {
+  await createGroup(page);
+  await page.getByTestId('tab-group').click();
+  await page.locator('.leaderboard-row').first().click();
+
+  const detail = page.getByTestId('person-detail');
+  await expect(detail).toBeVisible();
+  await expect(detail).toContainText('Days practised');
+  await expect(detail).toContainText('Best run');
+  await expect(detail).toContainText('posts shared');
+  await expect(detail).toContainText('reactions given');
+  // Holder-only rule: nothing about the cover token appears on a leaderboard
+  // detail view — see docs/PRODUCT-SPEC.md.
+  await expect(detail).not.toContainText('cover');
+  await expect(detail).not.toContainText('token');
+
+  await page.getByTestId('person-detail-close').click();
+  await expect(detail).not.toBeVisible();
+});
+
 test('the log screen offers a plain exit with no consequence copy', async ({ page }) => {
   await createGroup(page);
   await page.getByTestId('go-log').click();
@@ -227,6 +282,7 @@ test('posting proof appears in the feed and scores', async ({ page }) => {
   await createGroup(page);
   await page.getByTestId('tab-feed').click();
   await expect(page.getByTestId('feed-empty')).toBeVisible();
+  await page.getByTestId('new-post-fab').click();
   await page.getByTestId('input-caption').fill('twenty F-chord changes, slowly');
   await page.getByTestId('post').click();
   await expect(page.getByTestId('posts')).toContainText('twenty F-chord changes, slowly');
@@ -237,6 +293,7 @@ test('posting proof appears in the feed and scores', async ({ page }) => {
 test('a post can be commented on — unscored, unlike the reaction', async ({ page }) => {
   await createGroup(page);
   await page.getByTestId('tab-feed').click();
+  await page.getByTestId('new-post-fab').click();
   await page.getByTestId('input-caption').fill('twenty F-chord changes, slowly');
   await page.getByTestId('post').click();
 
@@ -258,6 +315,19 @@ test('the cover day is one tap with no confirmation dialog', async ({ page }) =>
   if (await cover.isVisible()) {
     await cover.click();
     // Straight to spent — no dialog, no "are you sure".
+    await expect(page.getByTestId('cover-spent')).toBeVisible();
+  }
+});
+
+test('the same cover day shortcut is one tap from Home', async ({ page }) => {
+  await createGroup(page);
+  const homeCover = page.getByTestId('home-cover-day');
+  if (await homeCover.isVisible()) {
+    await homeCover.click();
+    // Straight to spent — no dialog, no "are you sure" — and it disappears
+    // once there's nothing left to cover.
+    await expect(homeCover).not.toBeVisible();
+    await page.getByTestId('tab-settings').click();
     await expect(page.getByTestId('cover-spent')).toBeVisible();
   }
 });

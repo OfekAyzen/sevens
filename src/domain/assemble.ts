@@ -80,5 +80,6 @@ export function emptyLog(personId: PersonId, day: RunDay): DayLog {
     supportedPersonIds: [],
     minutes: null,
     loggedLate: false,
+    sessions: 0,
   };
 }

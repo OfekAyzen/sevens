@@ -96,6 +96,9 @@ export interface DayLog {
   minutes: number | null;
   /** True when logged during the following app-day. Private to the logger. */
   loggedLate: boolean;
+  /** How many separate sessions were logged this day. Tracking only — never
+   * read by scoreDay/scoreBreakdown, so it cannot change the daily ceiling. */
+  sessions: number;
 }
 
 /** The single "life happens" token. Exactly one per person per run. */

@@ -36,7 +36,7 @@
   min-height: 56px;
 }
 .tabbar__item.is-active { color: var(--tab-accent, var(--accent)); }
-.tabbar__icon { font-size: 1.25rem; }
+.tabbar__icon { display: flex; }
 .tabbar__label { font-size: var(--t-xs); font-weight: 600; }
 
 .screen {
@@ -196,8 +196,40 @@ textarea { min-height: 96px; resize: vertical; }
 .row { display: flex; gap: var(--s-3); align-items: center; }
 .muted { color: var(--text-faint); font-size: var(--t-sm); }
 
+/* Onboarding intro — Buddy's greeting bubble. ------------------------------ */
+.speech-bubble {
+  position: relative;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: var(--s-4);
+  min-height: 64px;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center;
+  cursor: pointer;
+  color: var(--text);
+  font: inherit;
+}
+.speech-bubble::before {
+  content: '';
+  position: absolute;
+  top: -8px; left: 50%; transform: translateX(-50%);
+  width: 16px; height: 16px;
+  background: var(--bg-raised);
+  border-left: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+  rotate: 45deg;
+}
+.speech-bubble p { margin: 0; }
+.bubble-dots { display: flex; justify-content: center; gap: var(--s-2); }
+.bubble-dot {
+  width: 8px; height: 8px; border-radius: var(--r-full);
+  border: none; background: var(--line-strong); padding: 0; cursor: pointer;
+}
+.bubble-dot.is-active { background: var(--screen-accent, var(--accent)); }
+
 .rule-row { display: flex; gap: var(--s-3); align-items: flex-start; }
-.rule-row__icon { font-size: var(--t-lg); line-height: 1.4; flex: 0 0 auto; }
+.rule-row__icon { display: flex; padding-top: 2px; flex: 0 0 auto; color: var(--screen-accent, var(--accent)); }
 .rule-row p { margin: 0; font-size: var(--t-sm); }
 
 /* Feed ------------------------------------------------------------------ */
@@ -219,6 +251,7 @@ textarea { min-height: 96px; resize: vertical; }
 .post__image { width: 100%; border-radius: var(--r-md); display: block; }
 .react-wrap { position: relative; align-self: flex-start; }
 .react {
+  display: inline-flex; align-items: center; gap: var(--s-2);
   background: var(--bg-sunken); border: 1px solid var(--line-strong);
   color: var(--text-dim); border-radius: var(--r-full);
   padding: var(--s-2) var(--s-4); min-height: 40px; cursor: pointer;
@@ -228,15 +261,62 @@ textarea { min-height: 96px; resize: vertical; }
   border-color: var(--screen-accent, var(--accent));
   color: var(--text);
 }
+.react.is-on .react__icon { color: #ff5c72; }
 .react__burst {
   position: absolute; top: -4px; left: 50%;
-  pointer-events: none; font-size: var(--t-lg);
+  pointer-events: none; color: #ff5c72;
+  display: flex;
 }
 
 .comments { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .comment { font-size: var(--t-sm); color: var(--text-dim); }
 .comment__who { font-weight: 600; color: var(--text); }
 .comment-input { flex: 1 1 auto; }
+
+/* Floating action button — a fixed-position primary action pinned to the
+   corner of a `.screen`, for the one thing that screen is mostly there to do
+   (post proof, see #2 in the round-5 plan). `.screen` is already
+   `position: relative`, so this anchors to it, not the viewport. */
+.fab {
+  position: absolute;
+  right: var(--s-4);
+  bottom: var(--s-5);
+  width: 56px; height: 56px;
+  border-radius: var(--r-full);
+  border: none;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--screen-accent, var(--accent));
+  color: #0b0d12;
+  cursor: pointer;
+  box-shadow: 0 12px 28px -10px color-mix(in srgb, var(--screen-accent, var(--accent)) 70%, transparent);
+  z-index: 5;
+}
+
+/* Sheet — a bottom-anchored modal for the composer and the leaderboard
+   person-detail view. */
+.sheet-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(4, 5, 8, 0.6);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 10;
+}
+.sheet {
+  width: 100%; max-width: 480px;
+  max-height: 82%;
+  overflow-y: auto;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-bottom: none;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  padding: var(--s-4) var(--s-4) calc(var(--safe-bottom) + var(--s-5));
+  display: flex; flex-direction: column; gap: var(--s-3);
+}
+.sheet__head { display: flex; align-items: center; justify-content: space-between; }
+.sheet__head h2 { margin: 0; }
+.sheet__close {
+  background: none; border: none; color: var(--text-dim);
+  display: flex; padding: var(--s-2); cursor: pointer;
+}
 
 /* Day 7 before/after ---------------------------------------------------- */
 .beforeafter { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-3); }
@@ -248,6 +328,7 @@ textarea { min-height: 96px; resize: vertical; }
   align-items: center;
   gap: var(--s-3);
   padding: var(--s-2) 0;
+  cursor: pointer;
 }
 .rank-badge {
   flex: 0 0 auto;
@@ -271,6 +352,7 @@ textarea { min-height: 96px; resize: vertical; }
 .leaderboard-row__name { font-weight: 600; flex: 1 1 auto; min-width: 0; }
 .leaderboard-row__stats { display: flex; align-items: center; gap: var(--s-3); flex: 0 0 auto; }
 .leaderboard-row__points { font-variant-numeric: tabular-nums; font-weight: 700; }
+.leaderboard-row__chevron { color: var(--text-faint); flex: 0 0 auto; }
 
 .streak-badge {
   display: inline-flex;

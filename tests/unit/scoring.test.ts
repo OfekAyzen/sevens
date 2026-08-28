@@ -92,6 +92,15 @@ describe('minutes', () => {
   });
 });
 
+describe('sessions', () => {
+  it('is tracking only — logging extra sessions never changes a score', () => {
+    const one = perfectLog('ofek', 1, others);
+    const many = { ...one, sessions: 6 };
+    expect(scoreDay(many)).toBe(scoreDay(one));
+    expect(scoreDay(many)).toBe(DAILY_CEILING);
+  });
+});
+
 describe('breakdown', () => {
   it('lists only earned rows and sums to the score', () => {
     const log = perfectLog('ofek', 1, others);

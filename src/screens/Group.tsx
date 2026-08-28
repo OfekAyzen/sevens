@@ -1,10 +1,12 @@
-import { motion } from 'framer-motion';
-import { useEffect, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
 import { copy } from '../domain/copy';
-import { GROUP_TARGET } from '../domain/types';
+import { personCounters } from '../domain/counters';
+import { GROUP_TARGET, type PersonId } from '../domain/types';
 import { useDerived } from '../store/derived';
 import { Buddy } from '../ui/Buddy';
-import { reorderTransition } from '../ui/motion';
+import { ChevronRightIcon, XIcon } from '../ui/icons';
+import { reorderTransition, spring } from '../ui/motion';
 import { playRankUp } from '../ui/sound';
 import {
   Card,
@@ -39,6 +41,8 @@ export function Group({ now = new Date() }: { now?: Date }) {
     previousRank.current = myRank;
   }, [myRank]);
 
+  const [selected, setSelected] = useState<PersonId | null>(null);
+
   if (!d) return null;
 
   const rows = d.leaderboard.map((row) => {
@@ -50,6 +54,14 @@ export function Group({ now = new Date() }: { now?: Date }) {
       hue: `var(--p${(i % 4) + 1})`,
     };
   });
+
+  const detailRow = selected ? rows.find((r) => r.personId === selected) : null;
+  const detailMember = selected ? d.members.find((m) => m.personId === selected) : null;
+  // Reuses the same personCounters() every screen's own stats come from — see
+  // src/domain/counters.ts. Deliberately omits anything about the cover
+  // token: its spend status is holder-only, never shown on someone else's row
+  // (see docs/PRODUCT-SPEC.md).
+  const detailCounters = selected ? personCounters(d.runState, selected, d.day) : null;
 
   return (
     <Screen testId="group" accent="var(--p3)" scroll="fixed">
@@ -64,6 +76,10 @@ export function Group({ now = new Date() }: { now?: Date }) {
             layout
             layoutId={row.personId}
             transition={reorderTransition}
+            onClick={() => setSelected(row.personId)}
+            data-testid={`row-${row.personId}`}
+            role="button"
+            tabIndex={0}
           >
             <RankBadge rank={row.rank} />
             <Buddy state={row.rank === 1 ? 'happy' : 'idle'} hue={row.hue} size={32} />
@@ -75,6 +91,7 @@ export function Group({ now = new Date() }: { now?: Date }) {
               <StreakBadge streak={row.currentStreak} />
               <span className="muted">{copy.group.minutes(row.totalMinutes)}</span>
               <span className="leaderboard-row__points">{row.points}</span>
+              <ChevronRightIcon size={18} className="leaderboard-row__chevron" />
             </div>
           </motion.div>
         ))}
@@ -85,6 +102,50 @@ export function Group({ now = new Date() }: { now?: Date }) {
           {copy.group.waiting(d.members.length)}
         </p>
       ) : null}
+
+      <AnimatePresence>
+        {detailRow && detailCounters ? (
+          <motion.div
+            className="sheet-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelected(null)}
+          >
+            <motion.div
+              className="sheet"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 24 }}
+              transition={spring}
+              data-testid="person-detail"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="sheet__head">
+                <h2 style={{ color: detailRow.hue }}>{detailRow.name}</h2>
+                <button
+                  className="sheet__close"
+                  aria-label={copy.group.close}
+                  data-testid="person-detail-close"
+                  onClick={() => setSelected(null)}
+                >
+                  <XIcon size={18} />
+                </button>
+              </div>
+              <div className="row" style={{ gap: 'var(--s-3)', flexWrap: 'wrap' }}>
+                <span className="muted">{copy.counters.daysPractised(detailCounters.daysPractised)}</span>
+                <span className="muted">{copy.counters.bestRun(detailCounters.bestRun)}</span>
+                <span className="muted">{copy.group.streak(detailCounters.currentStreak)}</span>
+                <span className="muted">{copy.group.minutes(detailCounters.totalMinutes)}</span>
+                <span className="muted">{copy.group.detailPosts(detailMember?.posts.length ?? 0)}</span>
+                <span className="muted">
+                  {copy.group.detailSupport(detailMember?.reactions.length ?? 0)}
+                </span>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </Screen>
   );
 }

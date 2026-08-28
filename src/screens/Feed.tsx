@@ -2,10 +2,11 @@ import { useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { copy } from '../domain/copy';
 import { downscaleImage } from '../ui/image';
-import { itemVariants, listVariants, pressable, springSnap } from '../ui/motion';
+import { itemVariants, listVariants, pressable, spring, springSnap } from '../ui/motion';
 import { useDerived } from '../store/derived';
 import { useRun } from '../store/run';
-import { Button, Card, Screen } from '../ui/components';
+import { Button, Screen } from '../ui/components';
+import { HeartIcon, PlusIcon, XIcon } from '../ui/icons';
 import { playTick } from '../ui/sound';
 
 /**
@@ -27,6 +28,7 @@ export function Feed({ now = new Date() }: { now?: Date }) {
   const react = useRun((s) => s.react);
   const addComment = useRun((s) => s.addComment);
 
+  const [composerOpen, setComposerOpen] = useState(false);
   const [caption, setCaption] = useState('');
   const [image, setImage] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
@@ -57,49 +59,82 @@ export function Feed({ now = new Date() }: { now?: Date }) {
     <Screen testId="feed" accent="var(--p4)" scroll="fixed">
       <h1>{copy.feed.heading}</h1>
 
-      <Card testId="composer">
-        <label>
-          {copy.feed.caption}
-          <input
-            type="text"
-            value={caption}
-            onChange={(e) => setCaption(e.target.value)}
-            data-testid="input-caption"
-          />
-        </label>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        hidden
+        data-testid="input-file"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void onPickFile(file);
+        }}
+      />
 
-        {image ? <img className="post__image" src={image} alt="" /> : null}
+      <AnimatePresence>
+        {composerOpen ? (
+          <motion.div
+            className="sheet-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setComposerOpen(false)}
+          >
+            <motion.div
+              className="sheet"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 24 }}
+              transition={spring}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="sheet__head">
+                <h2>{copy.feed.postPrompt}</h2>
+                <button
+                  className="sheet__close"
+                  aria-label={copy.feed.composerClose}
+                  data-testid="composer-close"
+                  onClick={() => setComposerOpen(false)}
+                >
+                  <XIcon size={18} />
+                </button>
+              </div>
 
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          hidden
-          data-testid="input-file"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void onPickFile(file);
-          }}
-        />
-        <Button variant="quiet" testId="attach" onClick={() => fileRef.current?.click()}>
-          {copy.feed.attach}
-        </Button>
+              <label>
+                {copy.feed.caption}
+                <input
+                  type="text"
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  data-testid="input-caption"
+                />
+              </label>
 
-        <Button
-          testId="post"
-          disabled={busy || caption.trim().length === 0}
-          onClick={() => {
-            setBusy(true);
-            void addPost(d.day, caption.trim(), image).then(() => {
-              setCaption('');
-              setImage(undefined);
-              setBusy(false);
-            });
-          }}
-        >
-          {copy.feed.post}
-        </Button>
-      </Card>
+              {image ? <img className="post__image" src={image} alt="" /> : null}
+
+              <Button variant="quiet" testId="attach" onClick={() => fileRef.current?.click()}>
+                {copy.feed.attach}
+              </Button>
+
+              <Button
+                testId="post"
+                disabled={busy || caption.trim().length === 0}
+                onClick={() => {
+                  setBusy(true);
+                  void addPost(d.day, caption.trim(), image).then(() => {
+                    setCaption('');
+                    setImage(undefined);
+                    setBusy(false);
+                    setComposerOpen(false);
+                  });
+                }}
+              >
+                {copy.feed.post}
+              </Button>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       {d.posts.length === 0 ? (
         <p className="muted" data-testid="feed-empty">
@@ -147,6 +182,7 @@ export function Feed({ now = new Date() }: { now?: Date }) {
                       }}
                       {...pressable}
                     >
+                      <HeartIcon size={16} filled={reacted} className="react__icon" />
                       {reacted ? copy.feed.supported : copy.feed.support}
                     </motion.button>
                     <AnimatePresence>
@@ -159,7 +195,7 @@ export function Feed({ now = new Date() }: { now?: Date }) {
                           exit={{ opacity: 0 }}
                           transition={{ duration: 0.65, ease: 'easeOut' }}
                         >
-                          ❤️
+                          <HeartIcon size={18} filled />
                         </motion.span>
                       ))}
                     </AnimatePresence>
@@ -206,6 +242,16 @@ export function Feed({ now = new Date() }: { now?: Date }) {
           })}
         </motion.ul>
       )}
+
+      <motion.button
+        className="fab"
+        data-testid="new-post-fab"
+        aria-label={copy.feed.postPrompt}
+        onClick={() => setComposerOpen(true)}
+        {...pressable}
+      >
+        <PlusIcon size={26} />
+      </motion.button>
     </Screen>
   );
 }

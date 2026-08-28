@@ -58,6 +58,7 @@ export function Log({
     supportedPersonIds: existing?.supportedPersonIds ?? [],
     minutes: minutes ? Number(minutes) : null,
     loggedLate: false,
+    sessions: practised ? (existing?.sessions ?? 1) : 0,
   };
 
   const points = scoreDay(draft, d.hasCatchup);

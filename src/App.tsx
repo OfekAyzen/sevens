@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
+import { Capacitor } from '@capacitor/core';
+import { StatusBar, Style } from '@capacitor/status-bar';
 import { Feed } from './screens/Feed';
 import { Finale } from './screens/Finale';
 import { Group } from './screens/Group';
@@ -30,6 +32,15 @@ export function App() {
   useEffect(() => {
     void hydrate();
   }, [hydrate]);
+
+  useEffect(() => {
+    // Edge-to-edge on Android — see MainActivity.java's
+    // setDecorFitsSystemWindows for the part that matters on API 35+, where
+    // this call is a no-op. No-op in the browser/dev server too.
+    if (!Capacitor.isNativePlatform()) return;
+    void StatusBar.setOverlaysWebView({ overlay: true });
+    void StatusBar.setStyle({ style: Style.Dark });
+  }, []);
 
   useEffect(() => {
     if (!group || !sync) return;

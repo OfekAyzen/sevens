@@ -1,8 +1,11 @@
 import { copy } from '../domain/copy';
-import { GROUP_TARGET } from '../domain/types';
+import { GROUP_TARGET, RUN_LENGTH_DAYS, type RunDay } from '../domain/types';
 import { useDerived } from '../store/derived';
+import { useRun } from '../store/run';
 import { Buddy } from '../ui/Buddy';
 import { Button, Card, DayStrip, GroupNumber, Screen, Stat } from '../ui/components';
+import { TicketIcon } from '../ui/icons';
+import { playTick } from '../ui/sound';
 
 /**
  * Home.
@@ -28,13 +31,28 @@ export function Home({
   now?: Date;
 }) {
   const d = useDerived(now);
+  const spendToken = useRun((s) => s.spendToken);
+  const saveLog = useRun((s) => s.saveLog);
   if (!d) return null;
 
   const dayCopy = copy.days[d.day];
   const loggedToday = d.covered.has(d.day);
+  const todayLog = d.myDoc.logs.find((l) => l.day === d.day);
   const dayOneReflection = d.myDoc.logs.find((l) => l.day === 1)?.reflection ?? null;
   const myRank = d.leaderboard.find((row) => row.personId === d.me)?.rank ?? d.leaderboard.length;
   const myHue = `var(--p${(d.members.findIndex((m) => m.personId === d.me) % 4) + 1})`;
+
+  // Same "earliest uncovered day" the Settings cover-card computes — this is
+  // just a one-tap shortcut to it, not a second source of truth.
+  let earliestMissedDay: RunDay | null = null;
+  if (d.myDoc.token.spentOnDay === null) {
+    for (let day = 1; day <= RUN_LENGTH_DAYS; day++) {
+      if (!d.covered.has(day as RunDay) && day <= d.day) {
+        earliestMissedDay = day as RunDay;
+        break;
+      }
+    }
+  }
 
   return (
     <Screen testId="home" scroll="fixed">
@@ -80,14 +98,48 @@ export function Home({
       </Card>
 
       {loggedToday ? (
-        <p className="muted" data-testid="already-logged">
-          {copy.log.logged(d.day)}
-        </p>
+        <>
+          <p className="muted" data-testid="already-logged">
+            {copy.log.logged(d.day)}
+          </p>
+          {todayLog?.practised ? (
+            <>
+              {todayLog.sessions > 1 ? (
+                <p className="muted" data-testid="sessions-count">
+                  {copy.log.sessionsCount(todayLog.sessions)}
+                </p>
+              ) : null}
+              <Button
+                variant="quiet"
+                testId="add-session"
+                onClick={() => {
+                  playTick();
+                  void saveLog(d.day, { sessions: (todayLog.sessions || 1) + 1 });
+                }}
+              >
+                {copy.log.addSession}
+              </Button>
+            </>
+          ) : null}
+        </>
       ) : (
         <Button onClick={onLog} testId="go-log" pulse>
           {copy.log.practisedQuestion}
         </Button>
       )}
+
+      {earliestMissedDay !== null ? (
+        <Button
+          variant="quiet"
+          testId="home-cover-day"
+          onClick={() => void spendToken(earliestMissedDay)}
+        >
+          <span className="row" style={{ gap: 'var(--s-2)', justifyContent: 'center' }}>
+            <TicketIcon size={16} />
+            {copy.settings.coverThisDay(earliestMissedDay)}
+          </span>
+        </Button>
+      ) : null}
     </Screen>
   );
 }

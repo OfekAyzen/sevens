@@ -1,10 +1,22 @@
-import { useState } from 'react';
+import { useState, type ComponentType } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { appDayDate } from '../domain/appDay';
 import { copy } from '../domain/copy';
 import type { Declaration } from '../domain/types';
 import { useRun } from '../store/run';
 import { Buddy } from '../ui/Buddy';
 import { Button, Card, Screen } from '../ui/components';
+import { spring } from '../ui/motion';
+import {
+  BellIcon,
+  HandsIcon,
+  HandshakeIcon,
+  MedalIcon,
+  RefreshIcon,
+  ScaleIcon,
+  TargetIcon,
+  TicketIcon,
+} from '../ui/icons';
 
 /**
  * Day 0. The pact.
@@ -38,6 +50,8 @@ export function Onboard({ onDone }: { onDone: () => void }) {
   const [mode, setMode] = useState<Mode>('intro');
   const [code, setCode] = useState('');
   const [startDate, setStartDate] = useState('');
+  const introBubbles = [copy.onboard.introGreeting, ...copy.onboard.introSteps];
+  const [bubbleIndex, setBubbleIndex] = useState(0);
 
   const [name, setName] = useState('');
   const [skill, setSkill] = useState('');
@@ -74,7 +88,7 @@ export function Onboard({ onDone }: { onDone: () => void }) {
     };
 
     if (mode === 'create') {
-      await createGroup(code || randomCode(), today, name.trim(), declaration);
+      await createGroup(code || randomCode(), startDate || today, name.trim(), declaration);
     } else {
       await joinGroup(code.trim().toUpperCase(), startDate || today, name.trim(), declaration);
     }
@@ -82,19 +96,53 @@ export function Onboard({ onDone }: { onDone: () => void }) {
   }
 
   if (mode === 'intro') {
+    const advanceBubble = () => setBubbleIndex((i) => (i + 1) % introBubbles.length);
+
     return (
       <Screen testId="onboard-intro">
-        <div className="row" style={{ justifyContent: 'center' }}>
+        <motion.div
+          className="row"
+          style={{ justifyContent: 'center' }}
+          initial={{ y: -60, opacity: 0, scale: 0.5 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          transition={spring}
+        >
           <Buddy state="happy" size={110} testId="buddy" />
-        </div>
+        </motion.div>
         <h1 style={{ textAlign: 'center' }}>{copy.appName}</h1>
         <p style={{ textAlign: 'center' }}>{copy.tagline}</p>
-        <Card testId="intro-steps">
-          <h2>{copy.onboard.introHeading}</h2>
-          {copy.onboard.introSteps.map((step, i) => (
-            <p key={i}>{step}</p>
+
+        <button
+          className="speech-bubble"
+          data-testid="intro-bubble"
+          onClick={advanceBubble}
+          aria-label={copy.onboard.introHeading}
+        >
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={bubbleIndex}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18 }}
+            >
+              {introBubbles[bubbleIndex]}
+            </motion.p>
+          </AnimatePresence>
+        </button>
+
+        <div className="bubble-dots" role="tablist" aria-label={copy.onboard.introHeading}>
+          {introBubbles.map((_, i) => (
+            <button
+              key={i}
+              className={`bubble-dot ${i === bubbleIndex ? 'is-active' : ''}`}
+              onClick={() => setBubbleIndex(i)}
+              aria-label={`${i + 1}`}
+              data-testid={`intro-dot-${i}`}
+            />
           ))}
-        </Card>
+        </div>
+
         <Button testId="intro-continue" onClick={() => setMode('choose')}>
           {copy.onboard.introContinue}
         </Button>
@@ -135,6 +183,16 @@ export function Onboard({ onDone }: { onDone: () => void }) {
               <input type="text" value={code} readOnly data-testid="group-code" />
             </label>
             <span className="muted">{copy.onboard.shareCode}</span>
+            <label>
+              {copy.onboard.startDate}
+              <input
+                type="date"
+                value={startDate || today}
+                onChange={(e) => setStartDate(e.target.value)}
+                data-testid="input-start-create"
+              />
+            </label>
+            <span className="muted">{copy.onboard.createStartDateHelp}</span>
           </>
         ) : (
           <>
@@ -229,18 +287,20 @@ export function Onboard({ onDone }: { onDone: () => void }) {
 
       <Card testId="rules">
         <h2>{copy.rules.heading}</h2>
-        {[
-          ['🎯', copy.rules.groupGoal],
-          ['🏅', copy.rules.bands],
-          ['⚖️', copy.rules.ceiling],
-          ['🔄', copy.rules.midpoint],
-          ['🤝', copy.rules.catchup],
-          ['🎫', copy.rules.coverDay],
-          ['🔔', copy.rules.notifications],
-          ['🫶', copy.setup.honourSystem],
-        ].map(([icon, text]) => (
+        {(
+          [
+            [TargetIcon, copy.rules.groupGoal],
+            [MedalIcon, copy.rules.bands],
+            [ScaleIcon, copy.rules.ceiling],
+            [RefreshIcon, copy.rules.midpoint],
+            [HandshakeIcon, copy.rules.catchup],
+            [TicketIcon, copy.rules.coverDay],
+            [BellIcon, copy.rules.notifications],
+            [HandsIcon, copy.setup.honourSystem],
+          ] as [ComponentType<{ size?: number }>, string][]
+        ).map(([Icon, text]) => (
           <div className="rule-row" key={text}>
-            <span className="rule-row__icon" aria-hidden="true">{icon}</span>
+            <span className="rule-row__icon"><Icon size={20} /></span>
             <p>{text}</p>
           </div>
         ))}
