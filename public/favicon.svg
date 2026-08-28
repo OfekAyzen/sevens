@@ -1,6 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <!-- Same four-glow stack as html/body's background in src/ui/tokens.css,
+         re-expressed as SVG gradients (color-mix(in srgb, X Y%, transparent)
+         is just X at Y% opacity). -->
+    <radialGradient id="glow-p1" cx="10%" cy="-12%" r="58%">
+      <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.34" />
+      <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="glow-p3" cx="105%" cy="0%" r="55%">
+      <stop offset="0%" stop-color="#f5a524" stop-opacity="0.28" />
+      <stop offset="100%" stop-color="#f5a524" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="glow-p4" cx="90%" cy="55%" r="55%">
+      <stop offset="0%" stop-color="#ef5da8" stop-opacity="0.22" />
+      <stop offset="100%" stop-color="#ef5da8" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="glow-p2" cx="50%" cy="120%" r="62%">
+      <stop offset="0%" stop-color="#22d3c9" stop-opacity="0.26" />
+      <stop offset="100%" stop-color="#22d3c9" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
   <rect width="120" height="120" rx="24" fill="#0b0d12" />
-  <g transform="translate(9.6 9.6) scale(0.8)">
+  <rect width="120" height="120" rx="24" fill="url(#glow-p2)" />
+  <rect width="120" height="120" rx="24" fill="url(#glow-p4)" />
+  <rect width="120" height="120" rx="24" fill="url(#glow-p3)" />
+  <rect width="120" height="120" rx="24" fill="url(#glow-p1)" />
+
+  <g transform="translate(12 12) scale(0.8)">
     <g transform="rotate(24 28 58)">
       <ellipse cx="20" cy="72" rx="10" ry="16" fill="#8b5cf6" />
     </g>
