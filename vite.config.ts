@@ -1,8 +1,59 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(({ mode }) => ({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Only registered for the real web/PWA build — the Capacitor native
+    // shells (Android, iOS) load `dist` straight off the filesystem and
+    // never need a service worker, and e2e's build stays minimal.
+    ...(mode === 'production'
+      ? [
+          VitePWA({
+            registerType: 'autoUpdate',
+            includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
+            manifest: {
+              name: 'Sevens',
+              short_name: 'Sevens',
+              description: 'A seven-day, four-person skill-learning competition.',
+              start_url: './',
+              scope: './',
+              display: 'standalone',
+              background_color: '#0b0d12',
+              theme_color: '#0b0d12',
+              icons: [
+                { src: 'icons/pwa-192.png', sizes: '192x192', type: 'image/png' },
+                { src: 'icons/pwa-512.png', sizes: '512x512', type: 'image/png' },
+                {
+                  src: 'icons/maskable-512.png',
+                  sizes: '512x512',
+                  type: 'image/png',
+                  purpose: 'maskable',
+                },
+              ],
+            },
+            workbox: {
+              // The app already treats storage/network failure as normal
+              // (see src/store/persist.ts, src/sync/supabase.ts) — this just
+              // adds the app shell to the cache so a repeat visit opens
+              // instantly and a offline launch shows the last-synced state
+              // instead of a blank tab.
+              globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+              navigateFallback: 'index.html',
+              runtimeCaching: [
+                {
+                  // Supabase sync must always hit the network — caching it
+                  // would show four people a stale copy of each other's day.
+                  urlPattern: ({ url }) => url.hostname.endsWith('.supabase.co'),
+                  handler: 'NetworkOnly',
+                },
+              ],
+            },
+          }),
+        ]
+      : []),
+  ],
   // Capacitor loads the bundle from the filesystem, so assets must be relative.
   base: './',
   // The e2e build must never see real Supabase credentials from a locally
