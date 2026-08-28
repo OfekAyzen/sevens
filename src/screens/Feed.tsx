@@ -1,12 +1,14 @@
 import { useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { copy } from '../domain/copy';
+import { personCounters } from '../domain/counters';
+import type { PersonId } from '../domain/types';
 import { downscaleImage } from '../ui/image';
 import { itemVariants, listVariants, pressable, spring, springSnap } from '../ui/motion';
 import { useDerived } from '../store/derived';
 import { useRun } from '../store/run';
 import { Button, Screen } from '../ui/components';
-import { HeartIcon, PlusIcon, XIcon } from '../ui/icons';
+import { HeartIcon, PlusIcon, UserIcon, XIcon } from '../ui/icons';
 import { playTick } from '../ui/sound';
 
 /**
@@ -36,10 +38,20 @@ export function Feed({ now = new Date() }: { now?: Date }) {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [bursts, setBursts] = useState<Record<string, number[]>>({});
   const nextBurstId = useRef(0);
+  const [selected, setSelected] = useState<PersonId | null>(null);
 
   if (!d) return null;
 
   const myReactedPostIds = new Set(d.myDoc.reactions.map((r) => r.postId));
+
+  const selectedIndex = selected ? d.members.findIndex((m) => m.personId === selected) : -1;
+  const detailMember = selected ? d.members.find((m) => m.personId === selected) : null;
+  const detailHue = selectedIndex >= 0 ? `var(--p${(selectedIndex % 4) + 1})` : undefined;
+  // Reuses the same personCounters() every screen's own stats come from — see
+  // src/domain/counters.ts. Deliberately omits anything about the cover
+  // token: its spend status is holder-only, never shown on someone else's
+  // profile (see docs/PRODUCT-SPEC.md).
+  const detailCounters = selected ? personCounters(d.runState, selected, d.day) : null;
 
   function likeWithBurst(postId: string) {
     playTick();
@@ -165,7 +177,15 @@ export function Feed({ now = new Date() }: { now?: Date }) {
                 style={{ borderColor: `var(--p${(i % 4) + 1})` }}
               >
                 <div className="post__head">
-                  <span className="post__who">{d.names[post.personId] ?? post.personId}</span>
+                  <button
+                    className="post__who"
+                    onClick={() => setSelected(post.personId)}
+                    data-testid={`user-icon-${post.personId}`}
+                    aria-label={d.names[post.personId] ?? post.personId}
+                  >
+                    <UserIcon size={16} />
+                    {d.names[post.personId] ?? post.personId}
+                  </button>
                   <span className="muted">{copy.feed.dayLabel(post.day)}</span>
                 </div>
                 {post.image ? <img className="post__image" src={post.image} alt="" /> : null}
@@ -252,6 +272,48 @@ export function Feed({ now = new Date() }: { now?: Date }) {
       >
         <PlusIcon size={26} />
       </motion.button>
+
+      <AnimatePresence>
+        {detailMember && detailCounters ? (
+          <motion.div
+            className="sheet-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelected(null)}
+          >
+            <motion.div
+              className="sheet"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 24 }}
+              transition={spring}
+              data-testid="person-detail"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="sheet__head">
+                <h2 style={{ color: detailHue }}>{detailMember.displayName}</h2>
+                <button
+                  className="sheet__close"
+                  aria-label={copy.group.close}
+                  data-testid="person-detail-close"
+                  onClick={() => setSelected(null)}
+                >
+                  <XIcon size={18} />
+                </button>
+              </div>
+              <div className="row" style={{ gap: 'var(--s-3)', flexWrap: 'wrap' }}>
+                <span className="muted">{copy.counters.daysPractised(detailCounters.daysPractised)}</span>
+                <span className="muted">{copy.counters.bestRun(detailCounters.bestRun)}</span>
+                <span className="muted">{copy.group.streak(detailCounters.currentStreak)}</span>
+                <span className="muted">{copy.group.minutes(detailCounters.totalMinutes)}</span>
+                <span className="muted">{copy.group.detailPosts(detailMember.posts.length)}</span>
+                <span className="muted">{copy.group.detailSupport(detailMember.reactions.length)}</span>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </Screen>
   );
 }

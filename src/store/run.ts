@@ -23,6 +23,10 @@ interface Persisted {
   myDoc: MemberDoc | null;
   members: MemberDoc[];
   sync: SyncConfig | null;
+  /** Local-only, never synced: has Buddy explained "how the week works" on
+   * Home yet? Not part of MemberDoc on purpose — it's a per-device "have I
+   * seen the tutorial" flag, not something the group needs to see. */
+  rulesSeen: boolean;
 }
 
 interface Store extends Persisted {
@@ -54,6 +58,7 @@ interface Store extends Persisted {
   exportAll: () => Promise<void>;
   syncNow: () => Promise<void>;
   reset: () => Promise<void>;
+  markRulesSeen: () => Promise<void>;
 
   /** The assembled shared state every domain function consumes. */
   runState: () => RunState | null;
@@ -96,8 +101,10 @@ function newDoc(displayName: string, declaration: Declaration): MemberDoc {
 
 export const useRun = create<Store>((set, get) => {
   async function persist() {
-    const { group, me, myDoc, members, sync } = get();
-    await saveRaw(JSON.stringify({ group, me, myDoc, members, sync } satisfies Persisted));
+    const { group, me, myDoc, members, sync, rulesSeen } = get();
+    await saveRaw(
+      JSON.stringify({ group, me, myDoc, members, sync, rulesSeen } satisfies Persisted),
+    );
   }
 
   /**
@@ -133,6 +140,7 @@ export const useRun = create<Store>((set, get) => {
     myDoc: null,
     members: [],
     sync: null,
+    rulesSeen: false,
     hydrated: false,
     status: { state: 'offline' },
 
@@ -147,6 +155,7 @@ export const useRun = create<Store>((set, get) => {
           myDoc: p.myDoc ?? null,
           members: p.members ?? [],
           sync: p.sync ?? null,
+          rulesSeen: p.rulesSeen ?? false,
           hydrated: true,
         });
         if (p.sync && p.group) void get().syncNow();
@@ -315,8 +324,14 @@ export const useRun = create<Store>((set, get) => {
         myDoc: null,
         members: [],
         sync: null,
+        rulesSeen: false,
         status: { state: 'offline' },
       });
+    },
+
+    async markRulesSeen() {
+      set({ rulesSeen: true });
+      await persist();
     },
 
     runState() {

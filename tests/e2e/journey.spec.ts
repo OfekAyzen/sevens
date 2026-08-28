@@ -13,17 +13,46 @@ import { expect, test, type Page } from '@playwright/test';
  * application works.
  */
 
+/** Click through Buddy's intro bubbles regardless of how many there are. */
+async function clickPastIntro(page: Page) {
+  while (!(await page.getByTestId('onboard-choose').isVisible())) {
+    await page.getByTestId('intro-continue').click();
+  }
+}
+
+/**
+ * The whole pact is now a stepped conversation with Buddy (Design Revision,
+ * round 6) — one question at a time, "Next" between them, ending on "begin".
+ * `code` and `start` need no input for a create flow (auto-generated code,
+ * default today), so this only fills the four required fields.
+ */
 async function createGroup(page: Page) {
   await page.goto('/');
-  await page.getByTestId('intro-continue').click();
+  await clickPastIntro(page);
   await page.getByTestId('mode-create').click();
+  await page.getByTestId('wizard-next').click(); // code -> start
+  await page.getByTestId('wizard-next').click(); // start -> name
   await page.getByTestId('input-name').fill('Ofek');
+  await page.getByTestId('wizard-next').click(); // name -> skill
   await page.getByTestId('input-skill').fill('fingerstyle guitar');
+  await page.getByTestId('wizard-next').click(); // skill -> minimum
   await page.getByTestId('input-minimum').fill('10');
+  await page.getByTestId('wizard-next').click(); // minimum -> cue
   await page.getByTestId('input-cue').fill('after I put my coffee down, at the kitchen table');
+  await page.getByTestId('wizard-next').click(); // cue -> feedback
   await page.getByTestId('input-feedback').fill('record myself and listen back');
+  await page.getByTestId('wizard-next').click(); // feedback -> reminder
+  await page.getByTestId('wizard-next').click(); // reminder -> begin
   await page.getByTestId('begin').click();
   await expect(page.getByTestId('home')).toBeVisible();
+
+  // Buddy explains "how the week works" automatically the first time — clear
+  // it so callers land on an interactable Home, same as every other test
+  // expects. See the dedicated test below for the auto-show behavior itself.
+  const rulesSheet = page.getByTestId('rules-sheet');
+  if (await rulesSheet.isVisible()) {
+    await page.getByTestId('rules-close').click();
+  }
 }
 
 test.beforeEach(async ({ page }) => {
@@ -59,20 +88,13 @@ test('no console errors while walking the main screens', async ({ page }) => {
 
 test('the begin button explains what is still missing instead of just staying disabled', async ({ page }) => {
   await page.goto('/');
-  await page.getByTestId('intro-continue').click();
+  await clickPastIntro(page);
   await page.getByTestId('mode-create').click();
+  // Click straight through every question without answering any of them.
+  for (let i = 0; i < 8; i++) await page.getByTestId('wizard-next').click();
 
-  const begin = page.getByTestId('begin');
-  await expect(begin).toBeDisabled();
+  await expect(page.getByTestId('begin')).toBeDisabled();
   await expect(page.getByTestId('missing-fields')).toContainText('Still needed');
-
-  await page.getByTestId('input-name').fill('Ofek');
-  await page.getByTestId('input-skill').fill('fingerstyle guitar');
-  await page.getByTestId('input-cue').fill('after I put my coffee down, at the kitchen table');
-  await page.getByTestId('input-feedback').fill('record myself and listen back');
-
-  await expect(page.getByTestId('missing-fields')).toHaveCount(0);
-  await expect(begin).toBeEnabled();
 });
 
 test('a new person can create a group and reach home', async ({ page }) => {
@@ -83,7 +105,7 @@ test('a new person can create a group and reach home', async ({ page }) => {
 
 test('creating a group produces a shareable code', async ({ page }) => {
   await page.goto('/');
-  await page.getByTestId('intro-continue').click();
+  await clickPastIntro(page);
   await page.getByTestId('mode-create').click();
   const code = await page.getByTestId('group-code').inputValue();
   // Six characters, no ambiguous glyphs — this gets retyped from a group chat.
@@ -96,14 +118,22 @@ test('the group creator can set the experiment start date, not just today', asyn
   const iso = twoDaysAgo.toISOString().slice(0, 10);
 
   await page.goto('/');
-  await page.getByTestId('intro-continue').click();
+  await clickPastIntro(page);
   await page.getByTestId('mode-create').click();
+  await page.getByTestId('wizard-next').click(); // code -> start
   await page.getByTestId('input-start-create').fill(iso);
+  await page.getByTestId('wizard-next').click(); // start -> name
   await page.getByTestId('input-name').fill('Ofek');
+  await page.getByTestId('wizard-next').click();
   await page.getByTestId('input-skill').fill('fingerstyle guitar');
+  await page.getByTestId('wizard-next').click();
   await page.getByTestId('input-minimum').fill('10');
+  await page.getByTestId('wizard-next').click();
   await page.getByTestId('input-cue').fill('after I put my coffee down, at the kitchen table');
+  await page.getByTestId('wizard-next').click();
   await page.getByTestId('input-feedback').fill('record myself and listen back');
+  await page.getByTestId('wizard-next').click();
+  await page.getByTestId('wizard-next').click();
   await page.getByTestId('begin').click();
 
   // Day 1 was two days ago, so today reads as Day 3 — proof the picked date,
@@ -115,22 +145,72 @@ test('a new person sees a short how-it-works screen before choosing create or jo
   await page.goto('/');
   await expect(page.getByTestId('onboard-intro')).toBeVisible();
   await expect(page.getByTestId('mode-create')).not.toBeVisible();
-  await page.getByTestId('intro-continue').click();
+  await clickPastIntro(page);
   await expect(page.getByTestId('onboard-choose')).toBeVisible();
 });
 
-test('the rules are published in full before anyone commits', async ({ page }) => {
+test('the "let\'s go" button advances Buddy\'s bubbles instead of skipping them', async ({ page }) => {
   await page.goto('/');
-  await page.getByTestId('intro-continue').click();
+  const bubble = page.getByTestId('intro-bubble');
+  const continueButton = page.getByTestId('intro-continue');
+
+  const first = await bubble.textContent();
+  await expect(continueButton).toHaveText('Next');
+  await continueButton.click();
+  await expect(bubble).not.toHaveText(first ?? '');
+  // Choosing a path hasn't happened yet — still on the intro screen.
+  await expect(page.getByTestId('onboard-intro')).toBeVisible();
+
+  // Keep advancing until the button itself says the final "let's go".
+  while ((await continueButton.textContent()) !== "Let's go") {
+    await continueButton.click();
+  }
+  await continueButton.click();
+  await expect(page.getByTestId('onboard-choose')).toBeVisible();
+});
+
+test('Buddy explains how the week works once automatically, then again on tap', async ({ page }) => {
+  await page.goto('/');
+  await clickPastIntro(page);
   await page.getByTestId('mode-create').click();
-  const rules = page.getByTestId('rules');
-  // Nobody should discover the midpoint reset or the catch-up rule mid-week.
-  await expect(rules).toContainText('24 practice-days');
-  await expect(rules).toContainText('Day 4');
-  await expect(rules).toContainText('catch-up');
-  await expect(rules).toContainText('cover day');
-  await expect(rules).toContainText('honour system');
-  await expect(rules).toContainText('Two a day');
+  await page.getByTestId('wizard-next').click();
+  await page.getByTestId('wizard-next').click();
+  await page.getByTestId('input-name').fill('Ofek');
+  await page.getByTestId('wizard-next').click();
+  await page.getByTestId('input-skill').fill('fingerstyle guitar');
+  await page.getByTestId('wizard-next').click();
+  await page.getByTestId('input-minimum').fill('10');
+  await page.getByTestId('wizard-next').click();
+  await page.getByTestId('input-cue').fill('after I put my coffee down, at the kitchen table');
+  await page.getByTestId('wizard-next').click();
+  await page.getByTestId('input-feedback').fill('record myself and listen back');
+  await page.getByTestId('wizard-next').click();
+  await page.getByTestId('wizard-next').click();
+  await page.getByTestId('begin').click();
+
+  // Shown automatically the first time, full disclosure — nobody should
+  // discover the midpoint reset or the catch-up rule mid-week.
+  const sheet = page.getByTestId('rules-sheet');
+  await expect(sheet).toBeVisible();
+  await expect(sheet).toContainText('24 practice-days');
+  await expect(sheet).toContainText('Day 4');
+  await expect(sheet).toContainText('catch-up');
+  await expect(sheet).toContainText('cover day');
+  await expect(sheet).toContainText('honour system');
+  await expect(sheet).toContainText('Two a day');
+
+  await page.getByTestId('rules-close').click();
+  await expect(sheet).not.toBeVisible();
+
+  // It doesn't come back on its own a second time...
+  await page.getByTestId('tab-group').click();
+  await page.getByTestId('tab-home').click();
+  await expect(sheet).not.toBeVisible();
+
+  // ...but tapping Buddy brings it back on demand.
+  await page.getByTestId('buddy-tap').click();
+  await expect(sheet).toBeVisible();
+  await page.getByTestId('rules-close').click();
 });
 
 test('the group number is the largest text on the home screen', async ({ page }) => {
@@ -249,23 +329,31 @@ test('the leaderboard shows rank, streak and points for a solo run', async ({ pa
   await expect(row.locator('.streak-badge')).toBeVisible();
 });
 
-test('tapping a leaderboard row opens that person\'s activity detail', async ({ page }) => {
+test('tapping a user icon in the feed opens their activity detail', async ({ page }) => {
   await createGroup(page);
-  await page.getByTestId('tab-group').click();
-  await page.locator('.leaderboard-row').first().click();
+  await page.getByTestId('tab-feed').click();
+  await page.getByTestId('new-post-fab').click();
+  await page.getByTestId('input-caption').fill('twenty F-chord changes, slowly');
+  await page.getByTestId('post').click();
 
+  await page.locator('.post__who').first().click();
   const detail = page.getByTestId('person-detail');
   await expect(detail).toBeVisible();
   await expect(detail).toContainText('Days practised');
   await expect(detail).toContainText('Best run');
   await expect(detail).toContainText('posts shared');
   await expect(detail).toContainText('reactions given');
-  // Holder-only rule: nothing about the cover token appears on a leaderboard
-  // detail view — see docs/PRODUCT-SPEC.md.
+  // Holder-only rule: nothing about the cover token appears on anyone's
+  // activity detail — see docs/PRODUCT-SPEC.md.
   await expect(detail).not.toContainText('cover');
   await expect(detail).not.toContainText('token');
 
   await page.getByTestId('person-detail-close').click();
+  await expect(detail).not.toBeVisible();
+
+  // Not reachable from the leaderboard — that screen is pure ranking now.
+  await page.getByTestId('tab-group').click();
+  await page.locator('.leaderboard-row').first().click();
   await expect(detail).not.toBeVisible();
 });
 

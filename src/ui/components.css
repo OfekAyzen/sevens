@@ -196,7 +196,16 @@ textarea { min-height: 96px; resize: vertical; }
 .row { display: flex; gap: var(--s-3); align-items: center; }
 .muted { color: var(--text-faint); font-size: var(--t-sm); }
 
-/* Onboarding intro — Buddy's greeting bubble. ------------------------------ */
+/* Buddy's speech bubble — used throughout onboarding and wherever else Buddy
+   talks (the Home rules recap). The bubble sits above Buddy's head with its
+   tail pointing straight down into him, so it reads as him speaking rather
+   than a generic card of text. */
+.buddy-speech {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+}
 .speech-bubble {
   position: relative;
   background: var(--bg-raised);
@@ -204,23 +213,25 @@ textarea { min-height: 96px; resize: vertical; }
   border-radius: var(--r-lg);
   padding: var(--s-4);
   min-height: 64px;
+  width: 100%;
   display: flex; align-items: center; justify-content: center;
   text-align: center;
-  cursor: pointer;
   color: var(--text);
   font: inherit;
 }
-.speech-bubble::before {
+.speech-bubble--tappable { cursor: pointer; }
+.speech-bubble::after {
   content: '';
   position: absolute;
-  top: -8px; left: 50%; transform: translateX(-50%);
+  bottom: -8px; left: 50%; transform: translateX(-50%) rotate(45deg);
   width: 16px; height: 16px;
   background: var(--bg-raised);
-  border-left: 1px solid var(--line);
-  border-top: 1px solid var(--line);
-  rotate: 45deg;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 .speech-bubble p { margin: 0; }
+.wizard-field { display: flex; flex-direction: column; gap: var(--s-2); width: 100%; }
+.buddy-tap { background: none; border: none; padding: 0; cursor: pointer; width: 100%; }
 .bubble-dots { display: flex; justify-content: center; gap: var(--s-2); }
 .bubble-dot {
   width: 8px; height: 8px; border-radius: var(--r-full);
@@ -247,7 +258,11 @@ textarea { min-height: 96px; resize: vertical; }
   box-shadow: 0 10px 24px -14px rgba(0, 0, 0, 0.6);
 }
 .post__head { display: flex; justify-content: space-between; align-items: baseline; }
-.post__who { font-weight: 600; }
+.post__who {
+  font-weight: 600; color: inherit;
+  background: none; border: none; padding: 0; font: inherit; cursor: pointer;
+  display: inline-flex; align-items: center; gap: var(--s-2);
+}
 .post__image { width: 100%; border-radius: var(--r-md); display: block; }
 .react-wrap { position: relative; align-self: flex-start; }
 .react {
@@ -328,7 +343,6 @@ textarea { min-height: 96px; resize: vertical; }
   align-items: center;
   gap: var(--s-3);
   padding: var(--s-2) 0;
-  cursor: pointer;
 }
 .rank-badge {
   flex: 0 0 auto;
@@ -352,7 +366,6 @@ textarea { min-height: 96px; resize: vertical; }
 .leaderboard-row__name { font-weight: 600; flex: 1 1 auto; min-width: 0; }
 .leaderboard-row__stats { display: flex; align-items: center; gap: var(--s-3); flex: 0 0 auto; }
 .leaderboard-row__points { font-variant-numeric: tabular-nums; font-weight: 700; }
-.leaderboard-row__chevron { color: var(--text-faint); flex: 0 0 auto; }
 
 .streak-badge {
   display: inline-flex;

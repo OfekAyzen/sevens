@@ -76,7 +76,9 @@ export const copy = {
       'Whoever has the fewest points gets a catch-up bonus, so the board stays close all week.',
       'The group also has one shared number everyone is aiming for together.',
     ],
+    introNext: 'Next',
     introContinue: "Let's go",
+    choosePrompt: 'Want to start a new group, or join one a friend already started?',
   },
 
   sync: {

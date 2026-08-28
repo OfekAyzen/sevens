@@ -161,6 +161,15 @@ export function HandsIcon({ size = 20, className }: IconProps) {
   );
 }
 
+export function UserIcon({ size = 20, className }: IconProps) {
+  return (
+    <svg {...base} width={size} height={size} className={className}>
+      <circle cx="12" cy="8.5" r="3.6" />
+      <path d="M4.5 19.5c0-3.6 3.4-6.5 7.5-6.5s7.5 2.9 7.5 6.5" />
+    </svg>
+  );
+}
+
 export function ChevronRightIcon({ size = 20, className }: IconProps) {
   return (
     <svg {...base} width={size} height={size} className={className}>

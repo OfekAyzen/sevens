@@ -1,10 +1,23 @@
+import { useState, type ComponentType } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { copy } from '../domain/copy';
 import { GROUP_TARGET, RUN_LENGTH_DAYS, type RunDay } from '../domain/types';
 import { useDerived } from '../store/derived';
 import { useRun } from '../store/run';
 import { Buddy } from '../ui/Buddy';
 import { Button, Card, DayStrip, GroupNumber, Screen, Stat } from '../ui/components';
-import { TicketIcon } from '../ui/icons';
+import {
+  BellIcon,
+  HandsIcon,
+  HandshakeIcon,
+  MedalIcon,
+  RefreshIcon,
+  ScaleIcon,
+  TargetIcon,
+  TicketIcon,
+  XIcon,
+} from '../ui/icons';
+import { spring } from '../ui/motion';
 import { playTick } from '../ui/sound';
 
 /**
@@ -18,6 +31,12 @@ import { playTick } from '../ui/sound';
  * Day 3 additionally surfaces their own Day 1 reflection and the offer to lower
  * their minimum, because Day 3 is the documented dip — novelty gone, no visible
  * skill gain yet, and the finish line still too far away to pull.
+ *
+ * Design Revision, round 6: "How the week works" moved here from the signup
+ * wizard — Buddy explains it once automatically the first time someone lands
+ * on Home, then again any time they tap him. Onboard.tsx's teaser bubbles
+ * still cover the gist before anyone commits to a group; this is the full
+ * version, now unhurried by a form someone's mid-filling.
  */
 export function Home({
   onLog,
@@ -33,6 +52,9 @@ export function Home({
   const d = useDerived(now);
   const spendToken = useRun((s) => s.spendToken);
   const saveLog = useRun((s) => s.saveLog);
+  const rulesSeen = useRun((s) => s.rulesSeen);
+  const markRulesSeen = useRun((s) => s.markRulesSeen);
+  const [rulesOpen, setRulesOpen] = useState(() => !rulesSeen);
   if (!d) return null;
 
   const dayCopy = copy.days[d.day];
@@ -41,6 +63,11 @@ export function Home({
   const dayOneReflection = d.myDoc.logs.find((l) => l.day === 1)?.reflection ?? null;
   const myRank = d.leaderboard.find((row) => row.personId === d.me)?.rank ?? d.leaderboard.length;
   const myHue = `var(--p${(d.members.findIndex((m) => m.personId === d.me) % 4) + 1})`;
+
+  function closeRules() {
+    setRulesOpen(false);
+    if (!rulesSeen) void markRulesSeen();
+  }
 
   // Same "earliest uncovered day" the Settings cover-card computes — this is
   // just a one-tap shortcut to it, not a second source of truth.
@@ -59,9 +86,15 @@ export function Home({
       <GroupNumber total={d.total} target={GROUP_TARGET} />
       <p data-testid="group-headline">{d.headline}</p>
 
-      <div className="row" style={{ justifyContent: 'center' }}>
+      <button
+        className="row buddy-tap"
+        style={{ justifyContent: 'center' }}
+        onClick={() => setRulesOpen(true)}
+        aria-label={copy.rules.heading}
+        data-testid="buddy-tap"
+      >
         <Buddy state={loggedToday ? 'happy' : 'waiting'} hue={myHue} testId="buddy" />
-      </div>
+      </button>
 
       <DayStrip today={d.day} covered={d.covered} />
 
@@ -140,6 +173,61 @@ export function Home({
           </span>
         </Button>
       ) : null}
+
+      <AnimatePresence>
+        {rulesOpen ? (
+          <motion.div
+            className="sheet-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={closeRules}
+          >
+            <motion.div
+              className="sheet"
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 24 }}
+              transition={spring}
+              data-testid="rules-sheet"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="sheet__head">
+                <div className="row" style={{ gap: 'var(--s-3)' }}>
+                  <Buddy state="happy" hue={myHue} size={40} />
+                  <h2>{copy.rules.heading}</h2>
+                </div>
+                <button
+                  className="sheet__close"
+                  aria-label={copy.group.close}
+                  data-testid="rules-close"
+                  onClick={closeRules}
+                >
+                  <XIcon size={18} />
+                </button>
+              </div>
+              {(
+                [
+                  [TargetIcon, copy.rules.groupGoal],
+                  [MedalIcon, copy.rules.bands],
+                  [ScaleIcon, copy.rules.ceiling],
+                  [RefreshIcon, copy.rules.midpoint],
+                  [HandshakeIcon, copy.rules.catchup],
+                  [TicketIcon, copy.rules.coverDay],
+                  [BellIcon, copy.rules.notifications],
+                  [HandsIcon, copy.setup.honourSystem],
+                ] as [ComponentType<{ size?: number }>, string][]
+              ).map(([Icon, text]) => (
+                <div className="rule-row" key={text}>
+                  <span className="rule-row__icon"><Icon size={20} /></span>
+                  <p>{text}</p>
+                </div>
+              ))}
+              <p className="muted">{copy.setup.spacingRationale}</p>
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </Screen>
   );
 }

@@ -1,22 +1,12 @@
-import { useState, type ComponentType } from 'react';
+import { useState, type ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { appDayDate } from '../domain/appDay';
 import { copy } from '../domain/copy';
 import type { Declaration } from '../domain/types';
 import { useRun } from '../store/run';
-import { Buddy } from '../ui/Buddy';
-import { Button, Card, Screen } from '../ui/components';
+import { BuddySpeech } from '../ui/BuddySpeech';
+import { Button, Screen } from '../ui/components';
 import { spring } from '../ui/motion';
-import {
-  BellIcon,
-  HandsIcon,
-  HandshakeIcon,
-  MedalIcon,
-  RefreshIcon,
-  ScaleIcon,
-  TargetIcon,
-  TicketIcon,
-} from '../ui/icons';
 
 /**
  * Day 0. The pact.
@@ -29,6 +19,13 @@ import {
  * on your worst day" produces a floor someone can actually clear on the bad
  * Wednesday, and a floor that gets cleared is worth more than an ambitious one
  * that gets abandoned on Day 3.
+ *
+ * Design Revision, round 6: the whole pact is now a conversation with Buddy —
+ * one question in his speech bubble at a time, Next/Back between them — rather
+ * than three long form cards. "How the week works" moved out of this flow
+ * entirely: Buddy explains it once on Home after signup, and on tap after
+ * that (see Home.tsx). The short teaser bubbles below still cover the gist
+ * before anyone commits to a group.
  */
 
 function randomCode(): string {
@@ -43,6 +40,18 @@ function randomCode(): string {
 
 type Mode = 'intro' | 'choose' | 'create' | 'join';
 
+const FORM_STEPS = [
+  'code',
+  'start',
+  'name',
+  'skill',
+  'minimum',
+  'cue',
+  'feedback',
+  'reminder',
+  'begin',
+] as const;
+
 export function Onboard({ onDone }: { onDone: () => void }) {
   const createGroup = useRun((s) => s.createGroup);
   const joinGroup = useRun((s) => s.joinGroup);
@@ -52,6 +61,7 @@ export function Onboard({ onDone }: { onDone: () => void }) {
   const [startDate, setStartDate] = useState('');
   const introBubbles = [copy.onboard.introGreeting, ...copy.onboard.introSteps];
   const [bubbleIndex, setBubbleIndex] = useState(0);
+  const [formStep, setFormStep] = useState(0);
 
   const [name, setName] = useState('');
   const [skill, setSkill] = useState('');
@@ -96,40 +106,33 @@ export function Onboard({ onDone }: { onDone: () => void }) {
   }
 
   if (mode === 'intro') {
+    const lastBubble = bubbleIndex === introBubbles.length - 1;
     const advanceBubble = () => setBubbleIndex((i) => (i + 1) % introBubbles.length);
 
     return (
       <Screen testId="onboard-intro">
         <motion.div
-          className="row"
-          style={{ justifyContent: 'center' }}
           initial={{ y: -60, opacity: 0, scale: 0.5 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
           transition={spring}
         >
-          <Buddy state="happy" size={110} testId="buddy" />
-        </motion.div>
-        <h1 style={{ textAlign: 'center' }}>{copy.appName}</h1>
-        <p style={{ textAlign: 'center' }}>{copy.tagline}</p>
+          <h1 style={{ textAlign: 'center' }}>{copy.appName}</h1>
+          <p style={{ textAlign: 'center' }}>{copy.tagline}</p>
 
-        <button
-          className="speech-bubble"
-          data-testid="intro-bubble"
-          onClick={advanceBubble}
-          aria-label={copy.onboard.introHeading}
-        >
-          <AnimatePresence mode="wait">
-            <motion.p
-              key={bubbleIndex}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.18 }}
-            >
-              {introBubbles[bubbleIndex]}
-            </motion.p>
-          </AnimatePresence>
-        </button>
+          <BuddySpeech tappable onTap={advanceBubble} testId="intro-bubble">
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={bubbleIndex}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.18 }}
+              >
+                {introBubbles[bubbleIndex]}
+              </motion.p>
+            </AnimatePresence>
+          </BuddySpeech>
+        </motion.div>
 
         <div className="bubble-dots" role="tablist" aria-label={copy.onboard.introHeading}>
           {introBubbles.map((_, i) => (
@@ -143,8 +146,11 @@ export function Onboard({ onDone }: { onDone: () => void }) {
           ))}
         </div>
 
-        <Button testId="intro-continue" onClick={() => setMode('choose')}>
-          {copy.onboard.introContinue}
+        <Button
+          testId="intro-continue"
+          onClick={() => (lastBubble ? setMode('choose') : advanceBubble())}
+        >
+          {lastBubble ? copy.onboard.introContinue : copy.onboard.introNext}
         </Button>
       </Screen>
     );
@@ -153,176 +159,206 @@ export function Onboard({ onDone }: { onDone: () => void }) {
   if (mode === 'choose') {
     return (
       <Screen testId="onboard-choose">
-        <h1>{copy.appName}</h1>
-        <p>{copy.tagline}</p>
+        <BuddySpeech testId="choose-bubble">
+          <p>{copy.onboard.choosePrompt}</p>
+        </BuddySpeech>
         <Button
           testId="mode-create"
           onClick={() => {
             setCode(randomCode());
+            setFormStep(0);
             setMode('create');
           }}
         >
           {copy.onboard.create}
         </Button>
-        <Button variant="quiet" testId="mode-join" onClick={() => setMode('join')}>
+        <Button
+          variant="quiet"
+          testId="mode-join"
+          onClick={() => {
+            setFormStep(0);
+            setMode('join');
+          }}
+        >
           {copy.onboard.join}
         </Button>
       </Screen>
     );
   }
 
-  return (
-    <Screen testId="onboard">
-      <h1>{copy.appName}</h1>
+  // mode is 'create' or 'join' — the stepped wizard, one question at a time
+  // from Buddy, sharing the same FORM_STEPS sequence for both paths.
+  const step = FORM_STEPS[formStep];
 
-      <Card testId="group-card">
-        {mode === 'create' ? (
-          <>
-            <label>
-              {copy.onboard.yourCode}
-              <input type="text" value={code} readOnly data-testid="group-code" />
-            </label>
-            <span className="muted">{copy.onboard.shareCode}</span>
-            <label>
-              {copy.onboard.startDate}
-              <input
-                type="date"
-                value={startDate || today}
-                onChange={(e) => setStartDate(e.target.value)}
-                data-testid="input-start-create"
-              />
-            </label>
-            <span className="muted">{copy.onboard.createStartDateHelp}</span>
-          </>
-        ) : (
-          <>
-            <label>
-              {copy.onboard.enterCode}
-              <input
-                type="text"
-                value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
-                data-testid="input-code"
-              />
-            </label>
-            <label>
-              {copy.onboard.startDate}
-              <input
-                type="date"
-                value={startDate || today}
-                onChange={(e) => setStartDate(e.target.value)}
-                data-testid="input-start"
-              />
-            </label>
-            <span className="muted">{copy.onboard.startDateHelp}</span>
-          </>
-        )}
-      </Card>
+  function nextForm() {
+    setFormStep((i) => Math.min(i + 1, FORM_STEPS.length - 1));
+  }
+  function backForm() {
+    if (formStep === 0) {
+      setMode('choose');
+      return;
+    }
+    setFormStep((i) => i - 1);
+  }
 
-      <Card testId="setup-form">
-        <label>
-          {copy.onboard.namePrompt}
+  let bubble: ReactNode;
+  let field: ReactNode;
+
+  switch (step) {
+    case 'code':
+      if (mode === 'create') {
+        bubble = <p>{copy.onboard.shareCode}</p>;
+        field = (
+          <label>
+            {copy.onboard.yourCode}
+            <input type="text" value={code} readOnly data-testid="group-code" />
+          </label>
+        );
+      } else {
+        bubble = <p>{copy.onboard.enterCode}</p>;
+        field = (
           <input
             type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            data-testid="input-name"
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            aria-label={copy.onboard.enterCode}
+            data-testid="input-code"
           />
-        </label>
-
+        );
+      }
+      break;
+    case 'start':
+      bubble = <p>{mode === 'create' ? copy.onboard.createStartDateHelp : copy.onboard.startDateHelp}</p>;
+      field = (
         <label>
-          {copy.setup.skillPrompt}
+          {copy.onboard.startDate}
           <input
-            type="text"
-            value={skill}
-            onChange={(e) => setSkill(e.target.value)}
-            data-testid="input-skill"
+            type="date"
+            value={startDate || today}
+            onChange={(e) => setStartDate(e.target.value)}
+            data-testid={mode === 'create' ? 'input-start-create' : 'input-start'}
           />
         </label>
-
-        <label>
-          {copy.setup.minimumPrompt}
+      );
+      break;
+    case 'name':
+      bubble = <p>{copy.onboard.namePrompt}</p>;
+      field = (
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          aria-label={copy.onboard.namePrompt}
+          data-testid="input-name"
+        />
+      );
+      break;
+    case 'skill':
+      bubble = <p>{copy.setup.skillPrompt}</p>;
+      field = (
+        <input
+          type="text"
+          value={skill}
+          onChange={(e) => setSkill(e.target.value)}
+          aria-label={copy.setup.skillPrompt}
+          data-testid="input-skill"
+        />
+      );
+      break;
+    case 'minimum':
+      bubble = <p>{copy.setup.minimumPrompt}</p>;
+      field = (
+        <>
           <input
             type="number"
             min={1}
             value={minimum}
             onChange={(e) => setMinimum(Number(e.target.value))}
+            aria-label={copy.setup.minimumPrompt}
             data-testid="input-minimum"
           />
           <span className="muted">{copy.setup.minimumHelp}</span>
-        </label>
-
-        <label>
-          {copy.setup.cuePrompt}
+        </>
+      );
+      break;
+    case 'cue':
+      bubble = <p>{copy.setup.cuePrompt}</p>;
+      field = (
+        <>
           <input
             type="text"
             value={cue}
             onChange={(e) => setCue(e.target.value)}
+            aria-label={copy.setup.cuePrompt}
             data-testid="input-cue"
           />
           <span className="muted">{copy.setup.cueHelp}</span>
-        </label>
-
-        <label>
-          {copy.setup.feedbackPrompt}
+        </>
+      );
+      break;
+    case 'feedback':
+      bubble = <p>{copy.setup.feedbackPrompt}</p>;
+      field = (
+        <>
           <input
             type="text"
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
+            aria-label={copy.setup.feedbackPrompt}
             data-testid="input-feedback"
           />
           <span className="muted">{copy.setup.feedbackHelp}</span>
-        </label>
+        </>
+      );
+      break;
+    case 'reminder':
+      bubble = <p>{copy.setup.reminderPrompt}</p>;
+      field = (
+        <input
+          type="time"
+          value={reminder}
+          onChange={(e) => setReminder(e.target.value)}
+          aria-label={copy.setup.reminderPrompt}
+          data-testid="input-reminder"
+        />
+      );
+      break;
+    case 'begin':
+      bubble = <p>{copy.setup.pactBody}</p>;
+      field = null;
+      break;
+  }
 
-        <label>
-          {copy.setup.reminderPrompt}
-          <input
-            type="time"
-            value={reminder}
-            onChange={(e) => setReminder(e.target.value)}
-            data-testid="input-reminder"
-          />
-        </label>
-      </Card>
+  return (
+    <Screen testId="onboard">
+      <BuddySpeech testId={`step-${step}`}>{bubble}</BuddySpeech>
 
-      <Card testId="rules">
-        <h2>{copy.rules.heading}</h2>
-        {(
-          [
-            [TargetIcon, copy.rules.groupGoal],
-            [MedalIcon, copy.rules.bands],
-            [ScaleIcon, copy.rules.ceiling],
-            [RefreshIcon, copy.rules.midpoint],
-            [HandshakeIcon, copy.rules.catchup],
-            [TicketIcon, copy.rules.coverDay],
-            [BellIcon, copy.rules.notifications],
-            [HandsIcon, copy.setup.honourSystem],
-          ] as [ComponentType<{ size?: number }>, string][]
-        ).map(([Icon, text]) => (
-          <div className="rule-row" key={text}>
-            <span className="rule-row__icon"><Icon size={20} /></span>
-            <p>{text}</p>
-          </div>
-        ))}
-        <p className="muted">{copy.setup.spacingRationale}</p>
-      </Card>
+      {field ? <div className="wizard-field">{field}</div> : null}
 
-      {missing.length > 0 ? (
-        <p className="muted" data-testid="missing-fields">
-          {copy.setup.missing(missing)}
-        </p>
-      ) : null}
+      {step === 'begin' ? (
+        <>
+          {missing.length > 0 ? (
+            <p className="muted" data-testid="missing-fields">
+              {copy.setup.missing(missing)}
+            </p>
+          ) : null}
+          <Button
+            testId="begin"
+            disabled={!ready}
+            onClick={() => {
+              void submit();
+            }}
+          >
+            {copy.setup.pactHeading}
+          </Button>
+        </>
+      ) : (
+        <Button testId="wizard-next" onClick={nextForm}>
+          {copy.onboard.introNext}
+        </Button>
+      )}
 
-      <Button
-        testId="begin"
-        disabled={!ready}
-        onClick={() => {
-          void submit();
-        }}
-      >
-        {copy.setup.pactHeading}
-      </Button>
-      <Button variant="plain" testId="onboard-back" onClick={() => setMode('choose')}>
+      <Button variant="plain" testId="onboard-back" onClick={backForm}>
         {copy.onboard.back}
       </Button>
     </Screen>
