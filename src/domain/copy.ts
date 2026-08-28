@@ -221,6 +221,16 @@ export const copy = {
     detailSupport: (n: number) => `${n} reactions given`,
   },
 
+  // Shown full-screen, in place of the app, from the moment someone joins
+  // until the group's Day 1 actually arrives — a creator can set a future
+  // start date, and nothing is loggable or postable before it.
+  waiting: {
+    heading: (date: string) => `Day 1 starts ${date}.`,
+    body: 'The same clock for all four of you — nobody can log or post before then.',
+    joined: (n: number) => `${n} of 4 have joined so far.`,
+    declaration: (skill: string) => `You're set to learn ${skill}.`,
+  },
+
   days: {
     1: {
       heading: 'Day 1. You are on the board.',

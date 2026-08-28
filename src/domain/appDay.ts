@@ -84,20 +84,25 @@ export function canLogFor(target: DayIndex, today: DayIndex): boolean {
  * `currentDay` returns null both before the run starts and after it ends —
  * two very different situations that must not be conflated. A group creator
  * can set a future start date, so "before" is a real, reachable state, not
- * just a theoretical one.
+ * just a theoretical one, and it is not equivalent to day 1: nobody may log
+ * or post until the run has actually started (`started` is what the app
+ * gates that on — see App.tsx).
  *
- * Before the run starts: day 1, not finished — the normal Home screen, not
- * the finale. After it ends: day 7, finished — everything freezes at day 7
- * so the finale and the report keep rendering rather than blanking out.
+ * `day`/`finished` still resolve to something sane in the "before" case
+ * (day 1, not finished) purely so every existing consumer that expects a
+ * valid RunDay keeps working — they're never actually shown, since the app
+ * takes over the whole screen while `!started`. After the run ends:
+ * everything freezes at day 7/finished so the finale and the report keep
+ * rendering rather than blanking out.
  */
 export function resolvedDay(
   instant: Date,
   timeZone: string,
   startDate: string,
-): { day: RunDay; finished: boolean } {
+): { day: RunDay; finished: boolean; started: boolean } {
   const day = currentDay(instant, timeZone, startDate);
-  if (day !== null) return { day, finished: false };
+  if (day !== null) return { day, finished: false, started: true };
 
-  const started = instant.getTime() > Date.parse(`${startDate}T00:00:00Z`);
-  return { day: started ? 7 : 1, finished: started };
+  const afterEnd = instant.getTime() > Date.parse(`${startDate}T00:00:00Z`);
+  return { day: afterEnd ? 7 : 1, finished: afterEnd, started: afterEnd };
 }

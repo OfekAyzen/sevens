@@ -7,6 +7,7 @@ import { Home } from './screens/Home';
 import { Log } from './screens/Log';
 import { Onboard } from './screens/Onboard';
 import { Settings } from './screens/Settings';
+import { WaitingToStart } from './screens/WaitingToStart';
 import { useNotifications } from './platform/notifications';
 import { useDerived } from './store/derived';
 import { useRun } from './store/run';
@@ -50,6 +51,17 @@ export function App() {
 
   if (!hydrated) return null;
   if (!group) return <Onboard onDone={() => setTab('home')} />;
+
+  // A group creator can set a future Day 1 (see Onboard.tsx's start-date
+  // step) — before it arrives, nothing is loggable or postable for anyone
+  // in the group, so there is no tab shell to show yet.
+  if (d && !d.started) {
+    return (
+      <AnimatePresence mode="wait">
+        <WaitingToStart key="waiting" />
+      </AnimatePresence>
+    );
+  }
 
   // Day 7 is a showcase and Day 8+ a clean ending — both take over the whole
   // app rather than living behind a tab. See Finale.tsx's own doc comment.

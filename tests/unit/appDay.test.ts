@@ -71,21 +71,26 @@ describe('resolvedDay', () => {
     expect(resolvedDay(new Date('2026-08-26T09:00:00Z'), TLV, start)).toEqual({
       day: 1,
       finished: false,
+      started: true,
     });
     expect(resolvedDay(new Date('2026-09-01T09:00:00Z'), TLV, start)).toEqual({
       day: 7,
       finished: false,
+      started: true,
     });
   });
 
   // Regression: a group creator can set a future start date (see the "set the
   // experiment start date" onboarding step), and this used to collapse into
   // the exact same day-7/finished state as a run that had already ended —
-  // showing the finale, with no tab bar, before day 1 had even happened.
-  it('is day 1, not finished, before a future start date arrives', () => {
+  // showing the finale, with no tab bar, before day 1 had even happened. Now
+  // `started: false` routes to WaitingToStart.tsx instead, which blocks
+  // logging and posting until the real day 1 arrives.
+  it('is day 1, not started, before a future start date arrives', () => {
     expect(resolvedDay(new Date('2026-08-24T09:00:00Z'), TLV, start)).toEqual({
       day: 1,
       finished: false,
+      started: false,
     });
   });
 
@@ -93,6 +98,7 @@ describe('resolvedDay', () => {
     expect(resolvedDay(new Date('2026-09-02T09:00:00Z'), TLV, start)).toEqual({
       day: 7,
       finished: true,
+      started: true,
     });
   });
 });

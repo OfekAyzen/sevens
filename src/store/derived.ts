@@ -38,6 +38,11 @@ export interface Derived {
   myDoc: MemberDoc;
   /** True once the run is over — day 8 and beyond. */
   finished: boolean;
+  /** False before the group's start date arrives. A group creator can set a
+   * future Day 1 (see the onboarding start-date step), and nobody may log or
+   * post until it actually arrives — App.tsx takes over the whole screen
+   * while this is false, the same way it does for `finished`. */
+  started: boolean;
 }
 
 export function useDerived(now: Date = new Date()): Derived | null {
@@ -57,7 +62,7 @@ export function useDerived(now: Date = new Date()): Derived | null {
     const resolved = withResolvedSupport(members);
     const runState = assemble(group, resolved);
     const zone = myDoc.declaration.timeZone;
-    const { day: effectiveDay, finished } = resolvedDay(new Date(time), zone, group.startDate);
+    const { day: effectiveDay, finished, started } = resolvedDay(new Date(time), zone, group.startDate);
 
     return {
       day: effectiveDay,
@@ -75,6 +80,7 @@ export function useDerived(now: Date = new Date()): Derived | null {
       comments: allComments(resolved),
       myDoc,
       finished,
+      started,
     };
   }, [group, me, myDoc, members, time]);
 }

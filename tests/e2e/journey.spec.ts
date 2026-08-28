@@ -141,6 +141,44 @@ test('the group creator can set the experiment start date, not just today', asyn
   await expect(page.getByTestId('day-banner')).toContainText('Day 3.');
 });
 
+test('a future start date blocks logging instead of showing the finale', async ({ page }) => {
+  const inTwoDays = new Date();
+  inTwoDays.setDate(inTwoDays.getDate() + 2);
+  const iso = inTwoDays.toISOString().slice(0, 10);
+
+  await page.goto('/');
+  await clickPastIntro(page);
+  await page.getByTestId('mode-create').click();
+  await page.getByTestId('wizard-next').click(); // code -> start
+  await page.getByTestId('input-start-create').fill(iso);
+  await page.getByTestId('wizard-next').click(); // start -> name
+  await page.getByTestId('input-name').fill('Ofek');
+  await page.getByTestId('wizard-next').click();
+  await page.getByTestId('input-skill').fill('fingerstyle guitar');
+  await page.getByTestId('wizard-next').click();
+  await page.getByTestId('input-minimum').fill('10');
+  await page.getByTestId('wizard-next').click();
+  await page.getByTestId('input-cue').fill('after I put my coffee down, at the kitchen table');
+  await page.getByTestId('wizard-next').click();
+  await page.getByTestId('input-feedback').fill('record myself and listen back');
+  await page.getByTestId('wizard-next').click();
+  await page.getByTestId('wizard-next').click();
+  await page.getByTestId('begin').click();
+
+  // Regression: this used to land on the day-7 finale (day ?? 7 conflated
+  // "before start" with "after end") instead of a screen that blocks
+  // logging until the real day 1.
+  await expect(page.getByTestId('waiting-to-start')).toBeVisible();
+  await expect(page.getByTestId('home')).not.toBeVisible();
+  await expect(page.getByTestId('finale')).not.toBeVisible();
+  await expect(page.locator('.tabbar')).not.toBeVisible();
+  await expect(page.getByTestId('go-log')).not.toBeVisible();
+
+  // Rule 10 (always show the exit): stuck on the wrong date is recoverable.
+  await page.getByTestId('reset').click();
+  await expect(page.getByTestId('onboard-intro')).toBeVisible();
+});
+
 test('a new person sees a short how-it-works screen before choosing create or join', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('onboard-intro')).toBeVisible();
