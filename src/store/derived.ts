@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { allComments, allPosts, assemble, nameMap, withResolvedSupport } from '../domain/assemble';
-import { currentDay } from '../domain/appDay';
+import { resolvedDay } from '../domain/appDay';
 import { catchupHolders } from '../domain/catchup';
 import { coveredDays, personCounters } from '../domain/counters';
 import { groupHeadline, groupTotal } from '../domain/group';
@@ -57,11 +57,7 @@ export function useDerived(now: Date = new Date()): Derived | null {
     const resolved = withResolvedSupport(members);
     const runState = assemble(group, resolved);
     const zone = myDoc.declaration.timeZone;
-    const day = currentDay(new Date(time), zone, group.startDate);
-
-    // Past the end of the run everything freezes at day 7 so the finale and the
-    // report keep rendering rather than blanking out on Monday morning.
-    const effectiveDay: RunDay = day ?? 7;
+    const { day: effectiveDay, finished } = resolvedDay(new Date(time), zone, group.startDate);
 
     return {
       day: effectiveDay,
@@ -78,7 +74,7 @@ export function useDerived(now: Date = new Date()): Derived | null {
       posts: allPosts(resolved),
       comments: allComments(resolved),
       myDoc,
-      finished: day === null && time > Date.parse(`${group.startDate}T00:00:00Z`),
+      finished,
     };
   }, [group, me, myDoc, members, time]);
 }

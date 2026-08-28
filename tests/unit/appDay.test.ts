@@ -5,6 +5,7 @@ import {
   canLogFor,
   currentDay,
   daysBetween,
+  resolvedDay,
 } from '../../src/domain/appDay';
 
 const TLV = 'Asia/Jerusalem';
@@ -60,6 +61,39 @@ describe('currentDay', () => {
   it('returns null outside the run', () => {
     expect(currentDay(new Date('2026-08-25T09:00:00Z'), TLV, start)).toBeNull();
     expect(currentDay(new Date('2026-09-02T09:00:00Z'), TLV, start)).toBeNull();
+  });
+});
+
+describe('resolvedDay', () => {
+  const start = '2026-08-26';
+
+  it('matches currentDay while the run is live', () => {
+    expect(resolvedDay(new Date('2026-08-26T09:00:00Z'), TLV, start)).toEqual({
+      day: 1,
+      finished: false,
+    });
+    expect(resolvedDay(new Date('2026-09-01T09:00:00Z'), TLV, start)).toEqual({
+      day: 7,
+      finished: false,
+    });
+  });
+
+  // Regression: a group creator can set a future start date (see the "set the
+  // experiment start date" onboarding step), and this used to collapse into
+  // the exact same day-7/finished state as a run that had already ended —
+  // showing the finale, with no tab bar, before day 1 had even happened.
+  it('is day 1, not finished, before a future start date arrives', () => {
+    expect(resolvedDay(new Date('2026-08-24T09:00:00Z'), TLV, start)).toEqual({
+      day: 1,
+      finished: false,
+    });
+  });
+
+  it('freezes at day 7, finished, once the run is over', () => {
+    expect(resolvedDay(new Date('2026-09-02T09:00:00Z'), TLV, start)).toEqual({
+      day: 7,
+      finished: true,
+    });
   });
 });
 

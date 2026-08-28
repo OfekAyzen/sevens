@@ -79,3 +79,25 @@ export function canLogFor(target: DayIndex, today: DayIndex): boolean {
   if (target < 1 || target > RUN_LENGTH_DAYS) return false;
   return target === today || target === today - 1;
 }
+
+/**
+ * `currentDay` returns null both before the run starts and after it ends —
+ * two very different situations that must not be conflated. A group creator
+ * can set a future start date, so "before" is a real, reachable state, not
+ * just a theoretical one.
+ *
+ * Before the run starts: day 1, not finished — the normal Home screen, not
+ * the finale. After it ends: day 7, finished — everything freezes at day 7
+ * so the finale and the report keep rendering rather than blanking out.
+ */
+export function resolvedDay(
+  instant: Date,
+  timeZone: string,
+  startDate: string,
+): { day: RunDay; finished: boolean } {
+  const day = currentDay(instant, timeZone, startDate);
+  if (day !== null) return { day, finished: false };
+
+  const started = instant.getTime() > Date.parse(`${startDate}T00:00:00Z`);
+  return { day: started ? 7 : 1, finished: started };
+}
