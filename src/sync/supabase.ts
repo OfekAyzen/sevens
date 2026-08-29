@@ -13,7 +13,10 @@ const TABLE = 'sevens_members';
  * own person_id, so concurrent writes from four phones cannot conflict.
  */
 export function supabaseBackend(config: SyncConfig): SyncBackend {
-  const base = config.url.replace(/\/+$/, '');
+  // Supabase's dashboard shows the REST endpoint (".../rest/v1/") right next to
+  // the bare project URL on the same settings page — strip it off if someone
+  // pastes that one in, since every request below appends "/rest/v1/" itself.
+  const base = config.url.replace(/\/+$/, '').replace(/\/rest\/v1$/, '');
   const headers = {
     apikey: config.anonKey,
     Authorization: `Bearer ${config.anonKey}`,
