@@ -44,7 +44,11 @@ jobs:
       - run: npm ci
       # `build`, not `build:capacitor` — this is the PWA-enabled bundle (see
       # vite.config.ts), never the one Android/iOS ship inside the native shell.
-      - run: npm run build
+      - name: Build web bundle
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

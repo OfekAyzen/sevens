@@ -45,6 +45,9 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Build web bundle and sync to iOS
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build && npx cap sync ios
 
       # Unsigned build: nobody in this group has a paid Apple Developer account.
