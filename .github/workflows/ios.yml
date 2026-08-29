@@ -11,6 +11,11 @@ concurrency:
   group: ios-${{ github.ref }}
   cancel-in-progress: true
 
+# The default GITHUB_TOKEN is read-only on this repo; the tag-triggered
+# "Publish release" step needs contents:write to create a GitHub Release.
+permissions:
+  contents: write
+
 jobs:
   # Same gate as android.yml — a red build can never produce an installable artifact.
   verify:
