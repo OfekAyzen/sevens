@@ -60,6 +60,9 @@ jobs:
 
       - run: npm ci
       - name: Build web bundle and sync to Android
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run cap:sync
 
       # Debug build: what the four of you sideload. Signed with the standard
